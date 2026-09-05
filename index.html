@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Cryptikr — AI-Powered Crypto Analysis</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#0A0E1A;--surface:#111827;--surface2:#1A2236;--border:#1E2D45;
+  --text:#F0F4FF;--text2:#94A3B8;--text3:#475569;
+  --accent:#F59E0B;--accent2:#FBBF24;--accent-bg:rgba(245,158,11,.1);
+  --green:#10B981;--green-bg:rgba(16,185,129,.1);
+  --red:#EF4444;--red-bg:rgba(239,68,68,.1);
+  --blue:#3B82F6;--radius:12px;
+}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased;}
+
+/* NAV */
+nav{background:rgba(10,14,26,.95);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);height:60px;display:flex;align-items:center;justify-content:space-between;padding:0 28px;position:sticky;top:0;z-index:100;}
+.logo{display:flex;align-items:center;gap:10px;text-decoration:none;}
+.logo-icon{width:34px;height:34px;background:linear-gradient(135deg,#F59E0B,#EF4444);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#fff;}
+.logo-name{font-size:18px;font-weight:800;color:#fff;letter-spacing:-.5px;}
+.logo-name span{color:var(--accent);}
+.logo-powered{font-size:10px;color:var(--text3);margin-left:2px;margin-top:2px;}
+.nav-right{display:flex;align-items:center;gap:12px;}
+.nav-search{display:flex;gap:6px;}
+.nav-search input{background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;padding:7px 14px;width:200px;font-family:'Inter',sans-serif;outline:none;}
+.nav-search input:focus{border-color:var(--accent);}
+.nav-search input::placeholder{color:var(--text3);}
+.nav-btn{background:var(--accent);color:#000;border:none;border-radius:8px;padding:7px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;}
+.nav-btn:hover{background:var(--accent2);}
+
+/* HERO */
+.hero{text-align:center;padding:72px 24px 56px;background:radial-gradient(ellipse at 50% 0%,rgba(245,158,11,.12) 0%,transparent 70%);}
+.hero-badge{display:inline-flex;align-items:center;gap:6px;background:var(--accent-bg);border:1px solid rgba(245,158,11,.3);color:var(--accent);font-size:12px;font-weight:600;padding:5px 14px;border-radius:20px;margin-bottom:20px;}
+.hero h1{font-size:52px;font-weight:800;letter-spacing:-2px;line-height:1.1;margin-bottom:16px;}
+.hero h1 span{background:linear-gradient(135deg,#F59E0B,#EF4444);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.hero p{font-size:18px;color:var(--text2);max-width:560px;margin:0 auto 36px;line-height:1.65;}
+.hero-search{display:flex;gap:8px;justify-content:center;max-width:480px;margin:0 auto 20px;}
+.hero-input{flex:1;background:var(--surface);border:1.5px solid var(--border);border-radius:10px;color:var(--text);font-size:15px;padding:12px 18px;font-family:'Inter',sans-serif;outline:none;}
+.hero-input:focus{border-color:var(--accent);}
+.hero-input::placeholder{color:var(--text3);}
+.hero-go{background:var(--accent);color:#000;border:none;border-radius:10px;padding:12px 24px;font-size:15px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;white-space:nowrap;}
+.hero-go:hover{background:var(--accent2);}
+.hero-chips{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;}
+.chip{background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:5px 14px;font-size:12px;font-weight:600;color:var(--text2);cursor:pointer;transition:all .15s;}
+.chip:hover{border-color:var(--accent);color:var(--accent);}
+
+/* MARKET OVERVIEW */
+.section{max-width:1100px;margin:0 auto;padding:0 24px 48px;}
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
+.section-title{font-size:18px;font-weight:700;color:var(--text);}
+.section-sub{font-size:13px;color:var(--text3);}
+.market-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;}
+.market-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;cursor:pointer;transition:all .2s;text-decoration:none;display:block;}
+.market-card:hover{border-color:var(--accent);transform:translateY(-2px);}
+.mc-logo{width:36px;height:36px;border-radius:10px;object-fit:contain;margin-bottom:10px;}
+.mc-logo-fb{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#F59E0B,#EA580C);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#fff;margin-bottom:10px;}
+.mc-sym{font-size:12px;font-weight:700;color:var(--text2);margin-bottom:2px;}
+.mc-name{font-size:11px;color:var(--text3);margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.mc-price{font-size:15px;font-weight:700;font-family:'JetBrains Mono',monospace;margin-bottom:2px;}
+.mc-chg{font-size:12px;font-weight:600;}
+.mc-chg.up{color:var(--green);} .mc-chg.dn{color:var(--red);}
+.loading-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;height:120px;animation:pulse 1.5s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+
+/* FEAR & GREED */
+.fg-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;display:flex;align-items:center;gap:20px;margin-bottom:32px;}
+.fg-gauge{width:80px;height:80px;flex-shrink:0;}
+.fg-info{flex:1;}
+.fg-label{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;}
+.fg-value{font-size:28px;font-weight:800;margin-bottom:2px;}
+.fg-desc{font-size:13px;color:var(--text2);}
+.fg-updated{font-size:11px;color:var(--text3);margin-top:4px;}
+
+/* GLOBAL STATS */
+.global-bar{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 24px;display:flex;gap:32px;margin-bottom:32px;overflow-x:auto;}
+.gb-item{flex-shrink:0;}
+.gb-label{font-size:11px;color:var(--text3);margin-bottom:3px;}
+.gb-val{font-size:14px;font-weight:700;font-family:'JetBrains Mono',monospace;}
+.gb-val.up{color:var(--green);} .gb-val.dn{color:var(--red);}
+
+/* POWERED BY */
+.powered{text-align:center;padding:32px;border-top:1px solid var(--border);margin-top:32px;}
+.powered a{color:var(--text3);font-size:12px;text-decoration:none;}
+.powered a:hover{color:var(--accent);}
+.powered a span{color:var(--blue);}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="/" class="logo">
+    <div class="logo-icon">₿</div>
+    <div>
+      <div class="logo-name">Crypti<span>kr</span></div>
+      <div class="logo-powered">Powered by PulseStock</div>
+    </div>
+  </a>
+  <div class="nav-right">
+    <div class="nav-search">
+      <input type="text" id="nav-search" placeholder="Search coin e.g. BTC" onkeydown="if(event.key==='Enter')goSearch()" />
+      <button class="nav-btn" onclick="goSearch()">Analyze ↗</button>
+    </div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-badge">⚡ AI-Powered · 24/7 · Real-Time</div>
+  <h1>Crypto analysis,<br><span>institutional grade.</span></h1>
+  <p>Real-time prices, AI deep dive analysis, and professional charts for every token. Free, always on.</p>
+  <div class="hero-search">
+    <input class="hero-input" type="text" id="hero-search" placeholder="Search any coin — BTC, ETH, SOL..." onkeydown="if(event.key==='Enter')goSearch()" />
+    <button class="hero-go" onclick="goSearch()">Analyze ↗</button>
+  </div>
+  <div class="hero-chips" id="quick-chips">
+    <span class="chip" onclick="goCoin('bitcoin')">₿ Bitcoin</span>
+    <span class="chip" onclick="goCoin('ethereum')">Ξ Ethereum</span>
+    <span class="chip" onclick="goCoin('solana')">◎ Solana</span>
+    <span class="chip" onclick="goCoin('ripple')">✕ XRP</span>
+    <span class="chip" onclick="goCoin('dogecoin')">Ð Dogecoin</span>
+    <span class="chip" onclick="goCoin('cardano')">₳ Cardano</span>
+  </div>
+</div>
+
+<div class="section">
+  <!-- GLOBAL BAR -->
+  <div class="global-bar" id="global-bar">
+    <div class="gb-item"><div class="gb-label">Total Market Cap</div><div class="gb-val" id="g-mcap">—</div></div>
+    <div class="gb-item"><div class="gb-label">24h Volume</div><div class="gb-val" id="g-vol">—</div></div>
+    <div class="gb-item"><div class="gb-label">BTC Dominance</div><div class="gb-val" id="g-btc">—</div></div>
+    <div class="gb-item"><div class="gb-label">ETH Dominance</div><div class="gb-val" id="g-eth">—</div></div>
+    <div class="gb-item"><div class="gb-label">Active Coins</div><div class="gb-val" id="g-coins">—</div></div>
+    <div class="gb-item"><div class="gb-label">Markets</div><div class="gb-val" id="g-markets">—</div></div>
+    <div class="gb-item"><div class="gb-label">Market Cap 24h</div><div class="gb-val" id="g-mcap-chg">—</div></div>
+  </div>
+
+  <!-- MARKET OVERVIEW -->
+  <div class="section-header">
+    <div class="section-title">Market Overview</div>
+    <div class="section-sub" id="market-updated">Loading...</div>
+  </div>
+  <div class="market-grid" id="market-grid">
+    <div class="loading-card"></div><div class="loading-card"></div>
+    <div class="loading-card"></div><div class="loading-card"></div>
+    <div class="loading-card"></div><div class="loading-card"></div>
+  </div>
+</div>
+
+<!-- POWERED BY -->
+<div class="powered">
+  <a href="https://pulsestock-nu.vercel.app" target="_blank">Powered by <span>PulseStock</span> · AI-powered stock & crypto analysis</a>
+  <br/><br/>
+  <span style="color:var(--text3);font-size:11px;">Data via CoinGecko · Not financial advice · © 2026 Cryptikr</span>
+</div>
+
+<script>
+var COIN_IDS = {
+  'BTC':'bitcoin','ETH':'ethereum','SOL':'solana','XRP':'ripple',
+  'DOGE':'dogecoin','ADA':'cardano','AVAX':'avalanche-2','DOT':'polkadot',
+  'LINK':'chainlink','MATIC':'matic-network','UNI':'uniswap','LTC':'litecoin',
+  'NEAR':'near','APT':'aptos','ARB':'arbitrum','ATOM':'cosmos',
+  'SHIB':'shiba-inu','TRX':'tron','TON':'the-open-network','SUI':'sui',
+  'PEPE':'pepe','BCH':'bitcoin-cash','AAVE':'aave','MKR':'maker',
+};
+
+var TOP_COINS = [
+  {id:'bitcoin',    sym:'BTC', name:'Bitcoin'},
+  {id:'ethereum',   sym:'ETH', name:'Ethereum'},
+  {id:'solana',     sym:'SOL', name:'Solana'},
+  {id:'ripple',     sym:'XRP', name:'XRP'},
+  {id:'dogecoin',   sym:'DOGE',name:'Dogecoin'},
+  {id:'cardano',    sym:'ADA', name:'Cardano'},
+  {id:'avalanche-2',sym:'AVAX',name:'Avalanche'},
+  {id:'polkadot',   sym:'DOT', name:'Polkadot'},
+  {id:'chainlink',  sym:'LINK',name:'Chainlink'},
+  {id:'near',       sym:'NEAR',name:'NEAR'},
+  {id:'aptos',      sym:'APT', name:'Aptos'},
+  {id:'arbitrum',   sym:'ARB', name:'Arbitrum'},
+];
+
+function fmt(n) {
+  if (!n) return '—';
+  n = parseFloat(n);
+  if (n >= 1e12) return '$' + (n/1e12).toFixed(2) + 'T';
+  if (n >= 1e9)  return '$' + (n/1e9).toFixed(2) + 'B';
+  if (n >= 1e6)  return '$' + (n/1e6).toFixed(2) + 'M';
+  if (n >= 1e3)  return '$' + n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+  if (n >= 1)    return '$' + n.toFixed(2);
+  return '$' + n.toFixed(6);
+}
+
+function fmtBig(n) {
+  if (!n) return '—';
+  n = parseFloat(n);
+  if (n >= 1e12) return '$' + (n/1e12).toFixed(2) + 'T';
+  if (n >= 1e9)  return '$' + (n/1e9).toFixed(2) + 'B';
+  if (n >= 1e6)  return '$' + (n/1e6).toFixed(2) + 'M';
+  return '$' + n.toFixed(0);
+}
+
+function goSearch() {
+  var val = (document.getElementById('nav-search').value || document.getElementById('hero-search').value).trim().toUpperCase();
+  if (!val) return;
+  var id = COIN_IDS[val] || val.toLowerCase();
+  window.location.href = '/crypto/' + id;
+}
+
+function goCoin(id) { window.location.href = '/crypto/' + id; }
+
+async function loadGlobal() {
+  try {
+    var resp = await fetch('/api/global');
+    if (!resp.ok) return;
+    var d = await resp.json();
+    if (d.total_market_cap_usd) document.getElementById('g-mcap').textContent = fmtBig(d.total_market_cap_usd);
+    if (d.total_volume_usd)     document.getElementById('g-vol').textContent  = fmtBig(d.total_volume_usd);
+    if (d.btc_dominance)        document.getElementById('g-btc').textContent  = d.btc_dominance.toFixed(1) + '%';
+    if (d.eth_dominance)        document.getElementById('g-eth').textContent  = d.eth_dominance.toFixed(1) + '%';
+    if (d.active_coins)         document.getElementById('g-coins').textContent = d.active_coins.toLocaleString();
+    if (d.markets)              document.getElementById('g-markets').textContent = d.markets.toLocaleString();
+    if (d.market_cap_change_24h != null) {
+      var el = document.getElementById('g-mcap-chg');
+      var v = parseFloat(d.market_cap_change_24h);
+      el.textContent = (v >= 0 ? '+' : '') + v.toFixed(2) + '%';
+      el.className = 'gb-val ' + (v >= 0 ? 'up' : 'dn');
+    }
+  } catch(e) { console.warn('Global data error:', e); }
+}
+
+async function loadMarket() {
+  try {
+    var ids = TOP_COINS.map(c => c.id).join(',');
+    var resp = await fetch('/api/market');
+    if (!resp.ok) return;
+    var coins = await resp.json();
+    var grid = document.getElementById('market-grid');
+    grid.innerHTML = coins.map(function(c) {
+      var pct = c.price_change_percentage_24h || 0;
+      var cls = pct >= 0 ? 'up' : 'dn';
+      var pctStr = (pct >= 0 ? '+' : '') + pct.toFixed(2) + '%';
+      var priceStr = c.current_price >= 1000
+        ? '$' + Math.round(c.current_price).toLocaleString()
+        : c.current_price >= 1 ? '$' + c.current_price.toFixed(2)
+        : '$' + c.current_price.toFixed(6);
+      return '<a class="market-card" href="/crypto/' + c.id + '">'
+        + (c.image ? '<img class="mc-logo" src="' + c.image + '" />' : '<div class="mc-logo-fb">' + c.symbol.toUpperCase().slice(0,2) + '</div>')
+        + '<div class="mc-sym">' + c.symbol.toUpperCase() + '</div>'
+        + '<div class="mc-name">' + c.name + '</div>'
+        + '<div class="mc-price">' + priceStr + '</div>'
+        + '<div class="mc-chg ' + cls + '">' + pctStr + '</div>'
+        + '</a>';
+    }).join('');
+    document.getElementById('market-updated').textContent = 'Updated ' + new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+  } catch(e) { console.warn('Market error:', e); }
+}
+
+// Load everything
+loadGlobal();
+loadMarket();
+setInterval(loadMarket, 60000);
+setInterval(loadGlobal, 300000);
+</script>
+</body>
+</html>

@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Crypto — PulseStock</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<script src="https://s3.tradingview.com/tv.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#F7F8FA;--surface:#fff;--border:#E2E8F0;--text:#0D1117;
+  --text2:#475569;--text3:#94A3B8;--accent:#1A6BF5;--green:#16A34A;
+  --green-bg:#F0FDF4;--red:#DC2626;--red-bg:#FEF2F2;--radius:12px;
+}
+body{font-family:'Inter',sans-serif;background:#0A0E1A;color:#F0F4FF;-webkit-font-smoothing:antialiased;}
+header{background:#fff;border-bottom:1px solid var(--border);height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;position:sticky;top:0;z-index:100;}
+.logo{display:flex;align-items:center;gap:8px;text-decoration:none;}
+.logo-icon{width:28px;height:28px;background:var(--accent);border-radius:7px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:700;}
+.logo-name{font-size:15px;font-weight:700;color:var(--text);}
+.logo-name span{color:var(--accent);}
+.back-btn{font-size:13px;color:var(--text2);text-decoration:none;padding:6px 12px;border-radius:7px;border:1px solid var(--border);}
+.search-wrap{display:flex;gap:6px;}
+.search-wrap input{width:180px;padding:7px 12px;font-size:13px;border-radius:7px;border:1.5px solid var(--border);font-family:'Inter',sans-serif;outline:none;color:var(--text);}
+.search-wrap input:focus{border-color:var(--accent);}
+.go-btn{background:var(--accent);color:#fff;padding:7px 16px;border-radius:7px;font-size:13px;font-weight:600;border:none;cursor:pointer;font-family:'Inter',sans-serif;}
+.main{max-width:1100px;margin:0 auto;padding:28px 24px 40px;}
+.coin-header{display:flex;align-items:flex-start;gap:16px;margin-bottom:24px;}
+.coin-logo{width:52px;height:52px;border-radius:12px;object-fit:contain;border:1px solid var(--border);}
+.coin-logo-fb{width:52px;height:52px;border-radius:12px;background:linear-gradient(135deg,#F59E0B,#EA580C);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;color:#fff;flex-shrink:0;}
+.coin-meta{flex:1;}
+.coin-name-row{display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap;}
+.coin-name{font-size:26px;font-weight:800;letter-spacing:-.5px;}
+.coin-sym{font-size:13px;font-weight:600;color:var(--text3);background:var(--bg);border:1px solid var(--border);padding:2px 8px;border-radius:5px;font-family:'JetBrains Mono',monospace;}
+.coin-rank{font-size:12px;color:var(--text3);background:var(--bg);border:1px solid var(--border);padding:2px 8px;border-radius:5px;}
+.coin-price{font-size:32px;font-weight:800;letter-spacing:-1px;font-family:'JetBrains Mono',monospace;}
+.coin-chg{font-size:14px;font-weight:600;padding:3px 9px;border-radius:6px;margin-left:10px;}
+.coin-chg.up{color:var(--green);background:var(--green-bg);}
+.coin-chg.dn{color:var(--red);background:var(--red-bg);}
+.coin-updated{font-size:11px;color:var(--text3);margin-top:4px;}
+.grid{display:grid;grid-template-columns:1fr 320px;gap:20px;}
+.card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:16px;}
+.card-title{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border);}
+.stat-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #F8FAFC;font-size:13px;}
+.stat-row:last-child{border-bottom:none;}
+.stat-label{color:var(--text2);}
+.stat-val{font-weight:600;font-family:'JetBrains Mono',monospace;font-size:12px;}
+.perf-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+.perf-label{width:32px;font-size:12px;color:var(--text3);}
+.perf-bar-bg{flex:1;height:5px;background:#F1F5F9;border-radius:3px;overflow:hidden;}
+.perf-bar-fill{height:100%;border-radius:3px;}
+.perf-val{width:60px;text-align:right;font-size:12px;font-weight:600;font-family:'JetBrains Mono',monospace;}
+.up{color:var(--green);} .dn{color:var(--red);}
+#main-content .loading{text-align:center;padding:80px;color:var(--text3);font-size:15px;}
+</style>
+</head>
+<body>
+
+<header>
+  <div style="display:flex;align-items:center;gap:16px;">
+    <a href="/" class="logo">
+      <div class="logo-icon" style="background:linear-gradient(135deg,#F59E0B,#EF4444);">₿</div>
+      <div>
+        <div class="logo-name">Crypti<span style="color:#F59E0B">kr</span></div>
+      </div>
+    </a>
+    <a href="/" class="back-btn">← Back</a>
+  </div>
+  <div class="search-wrap">
+    <input type="text" id="srch" placeholder="Search crypto..." onkeydown="if(event.key==='Enter')goSearch()"/>
+    <button class="go-btn" onclick="goSearch()">Go</button>
+  </div>
+</header>
+
+<div id="main-content">
+  <div class="loading">Loading crypto data...</div>
+</div>
+
+<script>
+var currentCoinId = '';
+
+var TV_SYMS = {
+  'bitcoin':'BINANCE:BTCUSDT','ethereum':'BINANCE:ETHUSDT','solana':'BINANCE:SOLUSDT',
+  'ripple':'BINANCE:XRPUSDT','dogecoin':'BINANCE:DOGEUSDT','cardano':'BINANCE:ADAUSDT',
+  'avalanche-2':'BINANCE:AVAXUSDT','polkadot':'BINANCE:DOTUSDT','chainlink':'BINANCE:LINKUSDT',
+  'matic-network':'BINANCE:MATICUSDT','uniswap':'BINANCE:UNIUSDT','litecoin':'BINANCE:LTCUSDT',
+  'near':'BINANCE:NEARUSDT','aptos':'BINANCE:APTUSDT','arbitrum':'BINANCE:ARBUSDT',
+  'cosmos':'BINANCE:ATOMUSDT','shiba-inu':'BINANCE:SHIBUSDT','tron':'BINANCE:TRXUSDT',
+  'the-open-network':'BINANCE:TONUSDT','sui':'BINANCE:SUIUSDT','pepe':'BINANCE:PEPEUSDT',
+  'bitcoin-cash':'BINANCE:BCHUSDT','aave':'BINANCE:AAVEUSDT','maker':'BINANCE:MKRUSDT',
+};
+
+var CRYPTO_ROUTE = {
+  'BTC':'bitcoin','ETH':'ethereum','SOL':'solana','XRP':'ripple',
+  'DOGE':'dogecoin','ADA':'cardano','AVAX':'avalanche-2','DOT':'polkadot',
+  'LINK':'chainlink','MATIC':'matic-network','UNI':'uniswap','LTC':'litecoin',
+  'NEAR':'near','APT':'aptos','ARB':'arbitrum','ATOM':'cosmos',
+  'SHIB':'shiba-inu','TRX':'tron','TON':'the-open-network','SUI':'sui',
+  'PEPE':'pepe','BCH':'bitcoin-cash','AAVE':'aave','MKR':'maker',
+};
+
+function fmt(n) {
+  if (n === null || n === undefined) return '—';
+  n = parseFloat(n);
+  if (isNaN(n)) return '—';
+  if (n >= 1e12) return '$' + (n/1e12).toFixed(2) + 'T';
+  if (n >= 1e9)  return '$' + (n/1e9).toFixed(2) + 'B';
+  if (n >= 1e6)  return '$' + (n/1e6).toFixed(2) + 'M';
+  if (n >= 1e3)  return '$' + n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+  if (n >= 1)    return '$' + n.toFixed(2);
+  return '$' + n.toFixed(6);
+}
+
+function fmtNum(n) {
+  if (!n) return '—';
+  n = parseFloat(n);
+  if (n >= 1e9) return (n/1e9).toFixed(2) + 'B';
+  if (n >= 1e6) return (n/1e6).toFixed(2) + 'M';
+  if (n >= 1e3) return (n/1e3).toFixed(1) + 'K';
+  return n.toLocaleString();
+}
+
+function fmtPct(n) {
+  if (n === null || n === undefined) return '—';
+  var v = parseFloat(n);
+  if (isNaN(v)) return '—';
+  return (v >= 0 ? '+' : '') + v.toFixed(2) + '%';
+}
+
+function statRow(label, val) {
+  return '<div class="stat-row"><span class="stat-label">'+label+'</span><span class="stat-val">'+val+'</span></div>';
+}
+
+function perfRow(label, val) {
+  var n = parseFloat(val) || 0;
+  var w = Math.min(Math.abs(n) * 2, 100);
+  var col = n >= 0 ? 'var(--green)' : 'var(--red)';
+  var cls = n >= 0 ? 'up' : 'dn';
+  return '<div class="perf-row">'
+    + '<span class="perf-label">'+label+'</span>'
+    + '<div class="perf-bar-bg"><div class="perf-bar-fill" style="width:'+w+'%;background:'+col+'"></div></div>'
+    + '<span class="perf-val '+cls+'">'+fmtPct(val)+'</span>'
+    + '</div>';
+}
+
+function renderCoin(c) {
+  var price  = parseFloat(c.price)  || 0;
+  var chg24  = parseFloat(c.chg24) || 0;
+  var chg7   = c.chg7;
+  var chg30  = c.chg30;
+  var chg1y  = c.chg1y;
+  var sym    = c.sym || currentCoinId.toUpperCase();
+  var name   = c.name || sym;
+  var cls    = chg24 >= 0 ? 'up' : 'dn';
+
+  var priceStr = price >= 1000
+    ? '$' + Math.round(price).toLocaleString()
+    : price >= 1 ? '$' + price.toFixed(2)
+    : '$' + price.toFixed(6);
+
+  var logoHtml = (c.image && c.image.large)
+    ? '<img class="coin-logo" src="'+c.image.large+'" alt="'+name+'" onerror="this.style.display=\'none\'"/>'
+    : '<div class="coin-logo-fb">'+sym.slice(0,2)+'</div>';
+
+  var volMktCap = (c.volume24 && c.marketCap)
+    ? (c.volume24/c.marketCap*100).toFixed(2)+'%' : '—';
+
+  var pctCirc = (c.circSupply && c.maxSupply)
+    ? (c.circSupply/c.maxSupply*100).toFixed(1)+'%'
+    : c.maxSupply === null ? 'No max' : '—';
+
+  var html = '<div class="main">'
+
+    // Header
+    + '<div class="coin-header">'
+    + logoHtml
+    + '<div class="coin-meta">'
+    + '<div class="coin-name-row">'
+    + '<span class="coin-name">'+name+'</span>'
+    + '<span class="coin-sym">'+sym+'</span>'
+    + (c.rank ? '<span class="coin-rank">#'+c.rank+'</span>' : '')
+    + '</div>'
+    + '<div style="display:flex;align-items:baseline;gap:4px;flex-wrap:wrap;">'
+    + '<span class="coin-price">'+priceStr+'</span>'
+    + '<span class="coin-chg '+cls+'">'+fmtPct(chg24)+' (24h)</span>'
+    + '</div>'
+    + '<div class="coin-updated">Updated just now · Data via CoinGecko</div>'
+    + '</div></div>'
+
+    // Grid
+    + '<div class="grid">'
+
+    // LEFT
+    + '<div>'
+
+    // Chart
+    + '<div class="card" style="padding:0;overflow:hidden;">'
+    + '<div style="padding:16px 20px 12px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">'
+    + '<span style="font-size:13px;font-weight:600;">Price Chart</span>'
+    + '<span style="font-size:11px;color:var(--text3);">RSI · MACD · All timeframes</span>'
+    + '</div>'
+    + '<div id="tv-container" style="height:560px;width:100%;"></div>'
+    + '</div>'
+
+    // Performance
+    + '<div class="card">'
+    + '<div class="card-title">Price Performance</div>'
+    + perfRow('24h', chg24)
+    + perfRow('7D', chg7)
+    + perfRow('30D', chg30)
+    + perfRow('1Y', chg1y)
+    + '</div>'
+    + '</div>'
+
+    // RIGHT
+    + '<div>'
+    + '<div class="card">'
+    + '<div class="card-title">Market Stats</div>'
+    + statRow('Market Cap', fmt(c.marketCap))
+    + statRow('Fully Diluted', fmt(c.fdv))
+    + statRow('24h Volume', fmt(c.volume24))
+    + statRow('Vol/Mkt Cap', volMktCap)
+    + statRow('Circulating', c.circSupply ? fmtNum(c.circSupply)+' '+sym : '—')
+    + statRow('Total Supply', c.totalSupply ? fmtNum(c.totalSupply)+' '+sym : '∞')
+    + statRow('Max Supply', c.maxSupply ? fmtNum(c.maxSupply)+' '+sym : '∞')
+    + '</div>'
+
+    + '<div class="card">'
+    + '<div class="card-title">All-Time Records</div>'
+    + statRow('All-Time High', c.ath ? fmt(c.ath)+(c.athChg ? ' <span class="'+(c.athChg>=0?'up':'dn')+'">'+fmtPct(c.athChg)+'</span>' : '') : '—')
+    + statRow('ATH Date', c.athDate ? new Date(c.athDate).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—')
+    + statRow('All-Time Low', c.atl ? fmt(c.atl)+(c.atlChg ? ' <span class="'+(c.atlChg>=0?'up':'dn')+'">'+fmtPct(c.atlChg)+'</span>' : '') : '—')
+    + statRow('ATL Date', c.atlDate ? new Date(c.atlDate).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—')
+    + '</div>'
+
+    + '<div class="card">'
+    + '<div class="card-title">Supply & Sentiment</div>'
+    + statRow('% Circulating', pctCirc)
+    + statRow('Sentiment ▲', c.sentiment_up ? '<span class="up">'+parseFloat(c.sentiment_up).toFixed(0)+'%</span>' : '—')
+    + statRow('Sentiment ▼', c.sentiment_dn ? '<span class="dn">'+parseFloat(c.sentiment_dn).toFixed(0)+'%</span>' : '—')
+    + statRow('CoinGecko Score', c.coingecko_score ? parseFloat(c.coingecko_score).toFixed(0)+'/100' : '—')
+    + '</div>'
+
+    + '</div>' // right
+    + '</div>' // grid
+    + '</div>'; // main
+
+  document.getElementById('main-content').innerHTML = html;
+  document.title = sym + ' ' + priceStr + ' — PulseStock';
+  setTimeout(function() { loadTVChart(currentCoinId); }, 500);
+}
+
+function loadTVChart(coinId) {
+  var sym = TV_SYMS[coinId] || ('BINANCE:' + coinId.toUpperCase().replace(/-/g,'') + 'USDT');
+  var el = document.getElementById('tv-container');
+  if (!el) return;
+  try {
+    new TradingView.widget({
+      container_id: 'tv-container',
+      symbol: sym,
+      interval: 'D',
+      timezone: 'exchange',
+      theme: 'light',
+      style: '1',
+      locale: 'en',
+      toolbar_bg: '#F4F7FD',
+      enable_publishing: false,
+      hide_top_toolbar: false,
+      withdateranges: true,
+      allow_symbol_change: false,
+      studies: ['RSI@tv-basicstudies','MACD@tv-basicstudies'],
+      width: '100%',
+      height: 560,
+      autosize: true,
+      show_popup_button: true,
+    });
+  } catch(e) {
+    el.innerHTML = '<iframe src="https://s.tradingview.com/widgetembed/?symbol='+encodeURIComponent(sym)+'&interval=D&theme=light&style=1&withdateranges=1&studies=RSI%40tv-basicstudies%1FMACD%40tv-basicstudies&showpopupbutton=1&locale=en" style="width:100%;height:560px;border:none;" allowfullscreen></iframe>';
+  }
+}
+
+async function loadCoin(coinId) {
+  try {
+    var resp = await fetch('/api/coin?id=' + encodeURIComponent(coinId));
+    if (!resp.ok) { showNotFound(coinId); return; }
+    var c = await resp.json();
+    if (c.error) { showNotFound(coinId); return; }
+    renderCoin(c);
+  } catch(e) {
+    document.getElementById('main-content').innerHTML = '<div style="text-align:center;padding:80px;color:#94A3B8;">Failed to load. <a href="javascript:location.reload()" style="color:#1A6BF5;">Try again</a></div>';
+  }
+}
+
+function showNotFound(coinId) {
+  document.getElementById('main-content').innerHTML = '<div style="text-align:center;padding:80px;"><h2 style="font-size:20px;margin-bottom:8px;">Not found</h2><p style="color:#64748B;margin-bottom:16px;">Could not find data for "'+coinId+'"</p><a href="/" style="color:#1A6BF5;font-weight:600;">← Back to PulseStock</a></div>';
+}
+
+function goSearch() {
+  var val = document.getElementById('srch').value.trim().toUpperCase();
+  if (!val) return;
+  var id = CRYPTO_ROUTE[val] || val.toLowerCase();
+  window.location.href = '/crypto/' + id;
+}
+
+// Init
+currentCoinId = window.location.pathname.replace(/\/crypto\/?/,'').replace(/\/+$/,'').toLowerCase().trim();
+if (!currentCoinId) showNotFound('unknown');
+else loadCoin(currentCoinId);
+</script>
+</body>
+</html>

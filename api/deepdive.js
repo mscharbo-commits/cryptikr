@@ -103,22 +103,15 @@ ${coinNews.map((n,i) => `${i+1}. ${n.headline}`).join('\n')}` : ''}
 ${macroHeadlines.length > 0 ? `MACRO CRYPTO NEWS:
 ${macroHeadlines.map((n,i) => `${i+1}. ${n.headline}`).join('\n')}` : ''}
 
-Write exactly 5 sections with these headers:
+Write exactly 5 sections — max 3 sentences each. Headers:
 
-## Market Position & Momentum
-Analyze price action, volume, and momentum across timeframes. Reference specific numbers. Assess where ${sym} sits relative to its ATH and what that implies.
+## Market Position
+## Tokenomics  
+## News Catalysts
+## Bull & Bear
+## Entry Strategy
 
-## Tokenomics & Supply Dynamics  
-Analyze circulating vs max supply, FDV vs market cap ratio, inflation pressure or scarcity. What does the supply structure mean for price?
-
-## News Catalyst Analysis
-Interpret the news items above. What are the key catalysts driving or threatening ${sym} right now? What macro crypto trends apply?
-
-## Bull Case & Bear Case
-Bull: 3 specific reasons with price targets. Bear: 3 specific risks with downside scenarios. Be direct.
-
-## Entry & Risk Strategy
-Specific support levels, resistance levels, and position sizing guidance. What conditions would change the thesis?`;
+Be direct. Specific numbers only. No padding.\`;
 
   // Stream from Anthropic
   const anthropicResp = await fetch('https://api.anthropic.com/v1/messages', {
@@ -130,7 +123,7 @@ Specific support levels, resistance levels, and position sizing guidance. What c
     },
     body: JSON.stringify({
       model: 'claude-sonnet-4-6',
-      max_tokens: 1500,
+      max_tokens: 1000,
       stream: true,
       messages: [{role:'user', content: prompt}],
     }),

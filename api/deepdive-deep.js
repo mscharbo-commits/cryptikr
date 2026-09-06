@@ -37,15 +37,14 @@ export default async function handler(req, res) {
   var ck = mode + '_' + coinId;
 
   if (_deepCache[ck] && Date.now() - _deepCache[ck].ts < DEEP_TTL) {
-    res.setHeader('Content-Type', 'text/plain');
+    res.setHeader('Content-Type', 'application/json');
     res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('X-Cache', 'HIT');
     res.end(_deepCache[ck].text);
     return;
   }
 
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Cache-Control', 'no-store');
+  // Headers set at response time
 
   var prompt = '';
 

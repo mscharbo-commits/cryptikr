@@ -322,10 +322,8 @@ function timeAgo(ts) {
 function fmtDD(text) {
   var out = text.replace(/^## (.+)$/gm, '<h2>$1</h2>');
   out = out.replace(/[*][*](.+?)[*][*]/g, '<strong>$1</strong>');
-  out = '<p>' + out.split('
-
-').join('</p><p>') + '</p>';
-  out = out.replace(/<p><h2>/g,'<h2>').replace(/<\/h2><\/p>/g,'</h2>');
+  out = '<p>' + out.split("\n\n").join('</p><p>') + '</p>';
+  out = out.replace(/<p><h2>/g,'<h2>').replace(/<[/]h2><[/]p>/g,'</h2>');
   return out;
 }
 

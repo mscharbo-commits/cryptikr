@@ -26,11 +26,22 @@ var COIN_KWS = {
   'near':['near protocol','near'],'aptos':['aptos','apt'],'arbitrum':['arbitrum','arb'],
 };
 
+const _deepCache = {};
+const DEEP_TTL = 20 * 60 * 1000;
+
 export default async function handler(req, res) {
   if (req.method === 'OPTIONS') { res.setHeader('Access-Control-Allow-Origin','*'); res.end(); return; }
   var params = new URL(req.url, 'https://cryptikr.vercel.app').searchParams;
   var coinId = (params.get('id') || '').toLowerCase();
   var mode   = params.get('mode') || 'deep';
+  var ck = mode + '_' + coinId;
+
+  if (_deepCache[ck] && Date.now() - _deepCache[ck].ts < DEEP_TTL) {
+    res.setHeader('Content-Type', 'text/plain');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.end(_deepCache[ck].text);
+    return;
+  }
 
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -99,16 +110,27 @@ export default async function handler(req, res) {
     return;
   }
 
-  // Pipe SSE stream to response
   var reader = anthropicResp.body.getReader();
   var dec = new TextDecoder();
+  var fullText = '';
+  var buf = '';
   try {
     while (true) {
       var result = await reader.read();
       if (result.done) break;
       var chunk = dec.decode(result.value, { stream: true });
       if (!res.writableEnded) res.write(chunk);
+      buf += chunk;
+      var lines = buf.split('\n'); buf = lines.pop() || '';
+      for (var i = 0; i < lines.length; i++) {
+        var ln = lines[i].trim();
+        if (ln.indexOf('data:') !== 0) continue;
+        var dd = ln.slice(5).trim();
+        if (dd === '[DONE]') continue;
+        try { var p2 = JSON.parse(dd); fullText += (p2.delta && p2.delta.text) || ''; } catch(e) {}
+      }
     }
   } catch(e) { console.error('Stream error:', e); }
+  if (fullText && fullText.length > 100) _deepCache[ck] = { ts: Date.now(), text: fullText };
   if (!res.writableEnded) res.end();
 }

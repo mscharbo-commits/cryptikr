@@ -1,6 +1,5 @@
 {
   "name": "cryptikr",
   "version": "1.0.0",
-  "description": "Cryptikr \u2014 AI-powered crypto analysis. Powered by PulseStock.",
-  "type": "module"
+  "description": "Cryptikr \u2014 AI-powered crypto analysis. Powered by PulseStock."
 }

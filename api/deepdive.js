@@ -125,6 +125,48 @@ export default async function handler(req) {
   const coinId = (searchParams.get('id') || '').toLowerCase();
   const mode   = searchParams.get('mode') || 'summary'; // 'summary' or 'deep'
 
+  // MARKET MODE — doesn't need a valid coinId
+  if (mode === 'market') {
+    const mCacheKey = 'market_overview';
+    if (_cache[mCacheKey] && Date.now() - _cache[mCacheKey].ts < CACHE_TTL) {
+      return new Response(_cache[mCacheKey].text, {
+        headers: { ...CORS, 'Content-Type': 'text/plain', 'X-Cache': 'HIT' }
+      });
+    }
+    const [gData, cNews] = await Promise.all([
+      sf('https://api.coingecko.com/api/v3/global'),
+      fetch(`https://finnhub.io/api/v1/news?category=crypto&token=${FINNHUB}`).then(r => r.ok ? r.json() : []).catch(() => []),
+    ]);
+    const g = gData?.data || {};
+    const btcDom = g.market_cap_percentage?.btc?.toFixed(1) || '?';
+    const totM = g.total_market_cap?.usd;
+    const mChg = g.market_cap_change_percentage_24h_usd?.toFixed(2) || '?';
+    function fmtBig(n) {
+      if (!n) return 'N/A';
+      if (n >= 1e12) return '$' + (n/1e12).toFixed(2) + 'T';
+      if (n >= 1e9)  return '$' + (n/1e9).toFixed(2) + 'B';
+      return '$' + n.toFixed(0);
+    }
+    const headlines = Array.isArray(cNews)
+      ? cNews.slice(0, 6).map((n, i) => `${i+1}. ${n.headline}`).join('\n')
+      : 'No news.';
+    const mPrompt = `You are CryptikrAI. Write 3 complete sentences giving an institutional crypto market overview. Each sentence must end with a period. Be specific and direct.
+
+Total Market Cap: ${fmtBig(totM)} (${mChg}% 24h) | BTC Dominance: ${btcDom}% | Active coins: ${g.active_cryptocurrencies || '?'}
+Top news:
+${headlines}
+
+Sentence 1: Overall market state with specific numbers. Sentence 2: Most important catalyst or risk. Sentence 3: What institutional investors should watch right now.`;
+
+    const mResp = await streamAI(mPrompt, 180);
+    if (!mResp.ok) return new Response('Market failed', { status: 500, headers: CORS });
+    const mText = await collectStream(mResp);
+    _cache[mCacheKey] = { ts: Date.now(), text: mText };
+    return new Response(mText, {
+      headers: { ...CORS, 'Content-Type': 'text/plain', 'X-Cache': 'MISS' }
+    });
+  }
+
   if (!coinId || !ANTHROPIC_KEY) {
     return new Response('Missing params', { status: 400, headers: CORS });
   }

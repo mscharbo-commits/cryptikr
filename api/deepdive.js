@@ -160,7 +160,20 @@ Sentence 1: Overall market state with specific numbers. Sentence 2: Most importa
 
     const mResp = await streamAI(mPrompt, 180);
     if (!mResp.ok) return new Response('Market failed', { status: 500, headers: CORS });
-    const mText = await collectStream(mResp);
+    // Read stream inline
+    const mReader = mResp.body.getReader();
+    const mDecoder = new TextDecoder();
+    let mText = '';
+    while (true) {
+      const { done, value } = await mReader.read();
+      if (done) break;
+      for (const line of mDecoder.decode(value, { stream: true }).split('\n')) {
+        if (!line.startsWith('data:')) continue;
+        const d2 = line.slice(5).trim();
+        if (d2 === '[DONE]') continue;
+        try { mText += JSON.parse(d2).delta?.text || ''; } catch(e) {}
+      }
+    }
     _cache[mCacheKey] = { ts: Date.now(), text: mText };
     return new Response(mText, {
       headers: { ...CORS, 'Content-Type': 'text/plain', 'X-Cache': 'MISS' }

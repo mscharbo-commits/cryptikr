@@ -105,15 +105,38 @@ nav{background:rgba(10,14,26,.95);backdrop-filter:blur(12px);border-bottom:1px s
 .news-hl{font-size:13px;font-weight:600;color:#F0F4FF;line-height:1.45;margin-bottom:4px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;}
 .news-ago{font-size:10px;color:#475569;}
 /* TICKER BAR */
-.ticker-bar{background:#080C18;border-bottom:1px solid #1E2D45;height:40px;overflow:hidden;display:flex;align-items:center;}
+.ticker-wrap{background:#080C18;border-bottom:1px solid #1E2D45;height:40px;display:flex;align-items:center;position:relative;}
+.ticker-bar{flex:1;overflow:hidden;height:40px;display:flex;align-items:center;}
 .ticker-scroll{display:flex;gap:0;animation:ticker-scroll 50s linear infinite;white-space:nowrap;align-items:center;}
 .ticker-scroll:hover{animation-play-state:paused;}
-.ticker-item{display:flex;align-items:center;gap:8px;padding:0 18px;height:40px;border-right:1px solid #1A2236;cursor:pointer;transition:background .15s;flex-shrink:0;text-decoration:none;}
+.ticker-item{display:flex;align-items:center;gap:8px;padding:0 16px;height:40px;border-right:1px solid #1A2236;cursor:pointer;transition:background .15s;flex-shrink:0;text-decoration:none;}
 .ticker-item:hover{background:#111827;}
 .ticker-sym{font-size:12px;font-weight:700;font-family:'JetBrains Mono',monospace;color:#E5E9F0;}
 .ticker-price{font-size:12px;font-family:'JetBrains Mono',monospace;color:#94A3B8;}
 .ticker-chg{font-size:11px;font-family:'JetBrains Mono',monospace;font-weight:600;}
+.ticker-label{font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;margin-right:2px;}
+.ticker-crypto{background:rgba(245,158,11,.15);color:#F59E0B;}
+.ticker-market{background:rgba(99,102,241,.15);color:#818CF8;}
 .ticker-up{color:#10B981;}.ticker-dn{color:#EF4444;}
+.ticker-settings-btn{flex-shrink:0;width:40px;height:40px;display:flex;align-items:center;justify-content:center;border-left:1px solid #1A2236;cursor:pointer;color:#475569;transition:color .15s;font-size:14px;}
+.ticker-settings-btn:hover{color:#F59E0B;}
+.ticker-panel{position:absolute;top:40px;right:0;width:320px;background:#111827;border:1px solid #1E2D45;border-radius:0 0 10px 10px;z-index:200;padding:16px;display:none;box-shadow:0 8px 24px rgba(0,0,0,.4);}
+.ticker-panel.open{display:block;}
+.tp-section{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#475569;margin:12px 0 8px;}
+.tp-section:first-child{margin-top:0;}
+.tp-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;}
+.tp-chip{display:flex;align-items:center;gap:5px;background:#1A2236;border:1px solid #1E2D45;border-radius:6px;padding:4px 8px;font-size:12px;font-weight:600;color:#94A3B8;cursor:pointer;}
+.tp-chip.active{border-color:#F59E0B;color:#F59E0B;}
+.tp-chip .rm{color:#475569;font-size:10px;margin-left:2px;}
+.tp-chip .rm:hover{color:#EF4444;}
+.tp-add{display:flex;gap:6px;margin-top:8px;}
+.tp-add input{flex:1;background:#0D1424;border:1px solid #1E2D45;border-radius:6px;color:#F0F4FF;font-size:12px;padding:5px 10px;font-family:'JetBrains Mono',monospace;outline:none;}
+.tp-add input:focus{border-color:#F59E0B;}
+.tp-add input::placeholder{color:#475569;}
+.tp-add button{background:#F59E0B;color:#000;border:none;border-radius:6px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;}
+.tp-speed{display:flex;align-items:center;gap:8px;margin-top:10px;}
+.tp-speed label{font-size:11px;color:#475569;width:50px;}
+.tp-speed input{flex:1;accent-color:#F59E0B;}
 @keyframes ticker-scroll{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
 /* POWERED BY */
 .powered{text-align:center;padding:32px;border-top:1px solid var(--border);margin-top:32px;}
@@ -141,9 +164,28 @@ nav{background:rgba(10,14,26,.95);backdrop-filter:blur(12px);border-bottom:1px s
 </nav>
 
 <!-- LIVE TICKER BAR -->
-<div class="ticker-bar">
-  <div class="ticker-scroll" id="ticker-scroll">
-    <div class="ticker-item"><span class="ticker-sym">Loading...</span></div>
+<div class="ticker-wrap" id="ticker-wrap">
+  <div class="ticker-bar">
+    <div class="ticker-scroll" id="ticker-scroll">
+      <div class="ticker-item"><span class="ticker-sym">Loading...</span></div>
+    </div>
+  </div>
+  <div class="ticker-settings-btn" onclick="toggleTickerPanel()" title="Customize ticker">⚙</div>
+  <div class="ticker-panel" id="ticker-panel">
+    <div class="tp-section">Crypto Tokens</div>
+    <div class="tp-chips" id="tp-crypto-chips"></div>
+    <div class="tp-add">
+      <input type="text" id="tp-crypto-input" placeholder="Add coin ID (e.g. chainlink)" onkeydown="if(event.key==='Enter')addCryptoToken()"/>
+      <button onclick="addCryptoToken()">Add</button>
+    </div>
+    <div class="tp-section">Market Indicators</div>
+    <div class="tp-chips" id="tp-market-chips"></div>
+    <div class="tp-section">Speed</div>
+    <div class="tp-speed">
+      <label>Slow</label>
+      <input type="range" id="tp-speed" min="20" max="120" value="50" oninput="setTickerSpeed(this.value)"/>
+      <label style="text-align:right">Fast</label>
+    </div>
   </div>
 </div>
 
@@ -420,29 +462,160 @@ async function loadNews() {
   } catch(e) { if(grid) grid.innerHTML='<p style="color:#475569;font-size:13px;">News unavailable.</p>'; }
 }
 
-function loadTicker() {
-  fetch('/api/market').then(function(r) { return r.ok ? r.json() : []; }).then(function(coins) {
-    if (!Array.isArray(coins) || !coins.length) return;
-    var scroll = document.getElementById('ticker-scroll');
-    if (!scroll) return;
-    function makeItems() {
-      return coins.map(function(c) {
-        var up = (c.price_change_percentage_24h || 0) >= 0;
-        var pct = (c.price_change_percentage_24h || 0).toFixed(2);
-        var price = c.current_price >= 1000 ? '$' + Math.round(c.current_price).toLocaleString()
-          : c.current_price >= 1 ? '$' + c.current_price.toFixed(2) : '$' + c.current_price.toFixed(4);
-        var id = c.id || 'bitcoin';
-        return '<a class="ticker-item" href="/crypto/' + id + '">'
-          + '<span class="ticker-sym">' + (c.symbol||'').toUpperCase() + '</span>'
-          + '<span class="ticker-price">' + price + '</span>'
-          + '<span class="ticker-chg ' + (up ? 'ticker-up' : 'ticker-dn') + '">' + (up ? '+' : '') + pct + '%</span>'
-          + '</a>';
-      }).join('');
+// DEFAULT TICKER CONFIG
+var DEFAULT_CRYPTO = ['bitcoin','ethereum','solana','ripple','dogecoin','cardano','avalanche-2','chainlink'];
+var DEFAULT_MARKETS = ['SPY','QQQ','DXY','GLD','TNX'];
+var MARKET_LABELS = {'SPY':'S&P 500','QQQ':'NASDAQ','DXY':'Dollar Index','GLD':'Gold','TNX':'10Y Yield'};
+
+// Load from localStorage
+function getTickerPrefs() {
+  try {
+    var saved = localStorage.getItem('cryptikr_ticker');
+    if (saved) return JSON.parse(saved);
+  } catch(e) {}
+  return { crypto: DEFAULT_CRYPTO.slice(), markets: DEFAULT_MARKETS.slice(), speed: 50 };
+}
+function saveTickerPrefs(prefs) {
+  try { localStorage.setItem('cryptikr_ticker', JSON.stringify(prefs)); } catch(e) {}
+}
+
+var tickerPrefs = getTickerPrefs();
+
+function setTickerSpeed(val) {
+  tickerPrefs.speed = parseInt(val);
+  saveTickerPrefs(tickerPrefs);
+  var scroll = document.getElementById('ticker-scroll');
+  if (scroll) scroll.style.animationDuration = (120 - parseInt(val) + 20) + 's';
+}
+
+function toggleTickerPanel() {
+  var panel = document.getElementById('ticker-panel');
+  if (panel) panel.classList.toggle('open');
+  renderTickerPanel();
+}
+
+function renderTickerPanel() {
+  var cc = document.getElementById('tp-crypto-chips');
+  var mc = document.getElementById('tp-market-chips');
+  var spd = document.getElementById('tp-speed');
+  if (!cc || !mc) return;
+  if (spd) spd.value = tickerPrefs.speed;
+
+  cc.innerHTML = tickerPrefs.crypto.map(function(id) {
+    var sym = id.replace(/-/g,' ').replace(/\w/g,function(c){return c.toUpperCase();});
+    return '<div class="tp-chip active">'
+      + '<span>' + (id === 'avalanche-2' ? 'AVAX' : id.toUpperCase().slice(0,4)) + '</span>'
+      + '<span class="rm" onclick="removeCryptoToken('' + id + '')">✕</span>'
+      + '</div>';
+  }).join('');
+
+  mc.innerHTML = DEFAULT_MARKETS.map(function(sym) {
+    var active = tickerPrefs.markets.indexOf(sym) >= 0;
+    return '<div class="tp-chip ' + (active ? 'active' : '') + '" onclick="toggleMarket('' + sym + '')">'
+      + '<span>' + (MARKET_LABELS[sym] || sym) + '</span>'
+      + '</div>';
+  }).join('');
+}
+
+function addCryptoToken() {
+  var input = document.getElementById('tp-crypto-input');
+  if (!input) return;
+  var val = input.value.trim().toLowerCase().replace(/\s+/g,'-');
+  if (!val) return;
+  if (tickerPrefs.crypto.indexOf(val) < 0) {
+    tickerPrefs.crypto.push(val);
+    saveTickerPrefs(tickerPrefs);
+    loadTicker();
+    renderTickerPanel();
+  }
+  input.value = '';
+}
+
+function removeCryptoToken(id) {
+  tickerPrefs.crypto = tickerPrefs.crypto.filter(function(c) { return c !== id; });
+  saveTickerPrefs(tickerPrefs);
+  loadTicker();
+  renderTickerPanel();
+}
+
+function toggleMarket(sym) {
+  var idx = tickerPrefs.markets.indexOf(sym);
+  if (idx >= 0) tickerPrefs.markets.splice(idx, 1);
+  else tickerPrefs.markets.push(sym);
+  saveTickerPrefs(tickerPrefs);
+  loadTicker();
+  renderTickerPanel();
+}
+
+// Close panel when clicking outside
+document.addEventListener('click', function(e) {
+  var wrap = document.getElementById('ticker-wrap');
+  var panel = document.getElementById('ticker-panel');
+  if (panel && panel.classList.contains('open') && wrap && !wrap.contains(e.target)) {
+    panel.classList.remove('open');
+  }
+});
+
+async function loadTicker() {
+  var scroll = document.getElementById('ticker-scroll');
+  if (!scroll) return;
+
+  // Fetch crypto from CoinGecko via our API
+  var cryptoItems = [];
+  var marketItems = [];
+
+  try {
+    var ids = tickerPrefs.crypto.join(',');
+    var r = await fetch('/api/market?ids=' + encodeURIComponent(ids));
+    if (r.ok) {
+      var coins = await r.json();
+      if (Array.isArray(coins)) {
+        cryptoItems = coins.map(function(c) {
+          var up = (c.price_change_percentage_24h || 0) >= 0;
+          var pct = (c.price_change_percentage_24h || 0).toFixed(2);
+          var pr = c.current_price;
+          var price = pr >= 1000 ? '$' + Math.round(pr).toLocaleString()
+            : pr >= 1 ? '$' + pr.toFixed(2) : '$' + pr.toFixed(4);
+          return '<a class="ticker-item" href="/crypto/' + (c.id||'bitcoin') + '">'
+            + '<span class="ticker-label ticker-crypto">CRYPTO</span>'
+            + '<span class="ticker-sym">' + (c.symbol||'').toUpperCase() + '</span>'
+            + '<span class="ticker-price">' + price + '</span>'
+            + '<span class="ticker-chg ' + (up?'ticker-up':'ticker-dn') + '">' + (up?'+':'') + pct + '%</span>'
+            + '</a>';
+        });
+      }
     }
-    var items = makeItems();
-    scroll.innerHTML = items + items;
-    scroll.style.animationDuration = (coins.length * 3.5) + 's';
-  }).catch(function() {});
+  } catch(e) {}
+
+  // Fetch market indicators from Finnhub
+  if (tickerPrefs.markets.length > 0) {
+    try {
+      var mResults = await Promise.all(tickerPrefs.markets.map(function(sym) {
+        return fetch('/api/market-quote?sym=' + sym).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;});
+      }));
+      mResults.forEach(function(data, i) {
+        if (!data) return;
+        var sym = tickerPrefs.markets[i];
+        var up = (data.dp || 0) >= 0;
+        var price = data.c ? '$' + parseFloat(data.c).toFixed(2) : '--';
+        var pct = data.dp ? (up?'+':'') + parseFloat(data.dp).toFixed(2) + '%' : '--';
+        var url = sym === 'SPY' || sym === 'QQQ' ? 'https://pulsestock-nu.vercel.app' : '#';
+        marketItems.push('<a class="ticker-item" href="' + url + '" target="' + (url==='#'?'_self':'_blank') + '">'
+          + '<span class="ticker-label ticker-market">MKT</span>'
+          + '<span class="ticker-sym">' + sym + '</span>'
+          + '<span class="ticker-price">' + price + '</span>'
+          + '<span class="ticker-chg ' + (up?'ticker-up':'ticker-dn') + '">' + pct + '</span>'
+          + '</a>');
+      });
+    } catch(e) {}
+  }
+
+  var all = cryptoItems.concat(marketItems);
+  if (!all.length) return;
+  var html2 = all.join('');
+  scroll.innerHTML = html2 + html2;
+  var speed = 120 - tickerPrefs.speed + 20;
+  scroll.style.animationDuration = speed + 's';
 }
 
 // Load everything

@@ -82,6 +82,26 @@ nav{background:rgba(10,14,26,.95);backdrop-filter:blur(12px);border-bottom:1px s
 .gb-val{font-size:14px;font-weight:700;font-family:'JetBrains Mono',monospace;}
 .gb-val.up{color:var(--green);} .gb-val.dn{color:var(--red);}
 
+/* AI OVERVIEW */
+.ai-card{background:linear-gradient(135deg,rgba(245,158,11,.08),rgba(239,68,68,.06));border:1px solid rgba(245,158,11,.2);border-radius:var(--radius);padding:24px;margin-bottom:32px;}
+.ai-header{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+.ai-badge{background:linear-gradient(135deg,#F59E0B,#EF4444);color:#000;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;}
+.ai-text{font-size:14px;color:#94A3B8;line-height:1.8;min-height:40px;}
+.ai-btn{background:linear-gradient(135deg,#F59E0B,#EF4444);color:#000;border:none;border-radius:8px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:14px;display:none;}
+.ai-btn:hover{opacity:.9;}
+.ai-deep{margin-top:16px;padding-top:16px;border-top:1px solid rgba(245,158,11,.15);display:none;font-size:13px;color:#94A3B8;line-height:1.7;}
+.ai-deep h2{font-size:13px;font-weight:700;color:#F0F4FF;margin:14px 0 6px;padding-bottom:4px;border-bottom:1px solid #1E2D45;}
+.ai-deep h2:first-child{margin-top:0;}
+.ai-deep p{margin-bottom:8px;}
+.ai-spinner{display:inline-block;width:12px;height:12px;border:2px solid rgba(0,0,0,.3);border-top-color:#000;border-radius:50%;animation:spin .6s linear infinite;margin-right:6px;vertical-align:middle;}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* NEWS */
+.news-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:32px;}
+.news-card{background:#111827;border:1px solid #1E2D45;border-radius:10px;padding:14px;text-decoration:none;display:block;transition:border-color .2s;}
+.news-card:hover{border-color:var(--accent);}
+.news-src{font-size:10px;color:var(--accent);font-weight:700;margin-bottom:5px;text-transform:uppercase;letter-spacing:.06em;}
+.news-hl{font-size:13px;font-weight:600;color:#F0F4FF;line-height:1.45;margin-bottom:4px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;}
+.news-ago{font-size:10px;color:#475569;}
 /* POWERED BY */
 .powered{text-align:center;padding:32px;border-top:1px solid var(--border);margin-top:32px;}
 .powered a{color:var(--text3);font-size:12px;text-decoration:none;}
@@ -147,6 +167,37 @@ nav{background:rgba(10,14,26,.95);backdrop-filter:blur(12px);border-bottom:1px s
     <div class="loading-card"></div><div class="loading-card"></div>
     <div class="loading-card"></div><div class="loading-card"></div>
     <div class="loading-card"></div><div class="loading-card"></div>
+  </div>
+</div>
+
+<!-- AI MARKET OVERVIEW -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-title">🧠 CryptikrAI Market Overview</div>
+    <div class="section-sub" id="ai-upd"></div>
+  </div>
+  <div class="ai-card">
+    <div class="ai-header">
+      <span class="ai-badge">CryptikrAI</span>
+      <span style="font-size:12px;color:var(--text3);">Live intelligence · Cached 30 min</span>
+    </div>
+    <div class="ai-text" id="ai-summary">Analyzing market conditions...</div>
+    <button class="ai-btn" id="ai-btn" onclick="runMktDive()">📊 Full Market Deep Dive →</button>
+    <div class="ai-deep" id="ai-deep"></div>
+  </div>
+</div>
+
+<!-- CRYPTO NEWS -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-title">📰 Crypto & Market News</div>
+    <div class="section-sub" id="news-upd"></div>
+  </div>
+  <div class="news-grid" id="news-grid">
+    <div class="loading-card" style="height:100px;"></div>
+    <div class="loading-card" style="height:100px;"></div>
+    <div class="loading-card" style="height:100px;"></div>
+    <div class="loading-card" style="height:100px;"></div>
   </div>
 </div>
 
@@ -258,11 +309,96 @@ async function loadMarket() {
   } catch(e) { console.warn('Market error:', e); }
 }
 
+function timeAgo(ts) {
+  var d = Date.now() - (ts * 1000);
+  var m = Math.floor(d / 60000);
+  if (m < 2) return 'just now';
+  if (m < 60) return m + 'm ago';
+  var h = Math.floor(m / 60);
+  if (h < 24) return h + 'h ago';
+  return Math.floor(h / 24) + 'd ago';
+}
+
+function fmtDD(text) {
+  var out = text.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+  out = out.replace(/[*][*](.+?)[*][*]/g, '<strong>$1</strong>');
+  out = '<p>' + out.split('
+
+').join('</p><p>') + '</p>';
+  out = out.replace(/<p><h2>/g,'<h2>').replace(/<\/h2><\/p>/g,'</h2>');
+  return out;
+}
+
+async function loadAI() {
+  var el = document.getElementById('ai-summary');
+  var btn = document.getElementById('ai-btn');
+  var upd = document.getElementById('ai-upd');
+  try {
+    var r = await fetch('/api/deepdive?mode=market&id=market');
+    if (!r.ok) throw new Error();
+    var text = await r.text();
+    if (text && text.length > 10) {
+      var clean = text.replace(/^#+\s*/gm,'').replace(/[*][*]/g,'').trim();
+      if (el) el.innerHTML = clean;
+      if (btn) btn.style.display = 'inline-block';
+      if (upd) upd.textContent = 'Updated ' + new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+    }
+  } catch(e) {
+    if (el) el.textContent = 'Market overview temporarily unavailable.';
+  }
+}
+
+async function runMktDive() {
+  var btn = document.getElementById('ai-btn');
+  var out = document.getElementById('ai-deep');
+  if (!btn || !out) return;
+  if (out.style.display === 'block') { out.style.display='none'; btn.innerHTML='📊 Full Market Deep Dive →'; return; }
+  btn.disabled = true;
+  btn.innerHTML = '<span class="ai-spinner"></span>Analyzing...';
+  out.style.display = 'block';
+  out.innerHTML = '<p style="color:#475569;">Gathering market data and news...</p>';
+  try {
+    var r = await fetch('/api/deepdive?mode=market&id=market');
+    if (!r.ok) throw new Error();
+    var text = await r.text();
+    out.innerHTML = fmtDD(text);
+    btn.innerHTML = '▲ Collapse';
+    btn.disabled = false;
+  } catch(e) {
+    out.innerHTML = '<p style="color:#EF4444;">Analysis failed. Try again.</p>';
+    btn.innerHTML = '📊 Full Market Deep Dive →';
+    btn.disabled = false;
+  }
+}
+
+async function loadNews() {
+  var grid = document.getElementById('news-grid');
+  var upd  = document.getElementById('news-upd');
+  try {
+    var r = await fetch('/api/news?limit=8');
+    if (!r.ok) throw new Error();
+    var items = await r.json();
+    if (!items || !items.length) { if(grid) grid.innerHTML='<p style="color:#475569;font-size:13px;">No news available.</p>'; return; }
+    grid.innerHTML = items.slice(0,8).map(function(n) {
+      var ago = n.datetime ? timeAgo(n.datetime) : '';
+      return '<a class="news-card" href="' + n.url + '" target="_blank" rel="noopener">'
+        + '<div class="news-src">' + (n.source||'News') + '</div>'
+        + '<div class="news-hl">' + n.headline + '</div>'
+        + '<div class="news-ago">' + ago + '</div>'
+        + '</a>';
+    }).join('');
+    if (upd) upd.textContent = 'Updated ' + new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+  } catch(e) { if(grid) grid.innerHTML='<p style="color:#475569;font-size:13px;">News unavailable.</p>'; }
+}
+
 // Load everything
 loadGlobal();
 loadMarket();
+loadAI();
+loadNews();
 setInterval(loadMarket, 60000);
 setInterval(loadGlobal, 300000);
+setInterval(loadNews, 300000);
 </script>
 </body>
 </html>

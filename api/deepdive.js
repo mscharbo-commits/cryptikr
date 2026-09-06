@@ -93,12 +93,19 @@ async function fetchContext(coinId) {
 }
 
 function buildDataBlock(c) {
-  return `COIN: ${c.name} (${c.sym}) | Price: $${c.price.toLocaleString()} | 24h: ${c.chg24.toFixed(2)}% | 7D: ${c.chg7.toFixed(2)}% | 30D: ${c.chg30.toFixed(2)}%
-Market Cap: ${c.fmtN(c.mktCap)} | FDV: ${c.fmtN(c.fdv)} | Rank: #${c.rank} | Volume: ${c.fmtN(c.vol24)}
-Supply: ${c.circ ? c.circ.toLocaleString() : 'N/A'} / ${c.maxSup ? c.maxSup.toLocaleString() : 'Unlimited'} | ATH: $${c.ath.toLocaleString()} (${c.athChg.toFixed(1)}% away)
-Sentiment: ${c.sentUp.toFixed(0)}% bullish | BTC Dom: ${c.btcDom}% | Total Mkt: ${c.fmtN(c.totalMkt)} (${c.mktChg}% 24h)
-${c.coinNews.length > 0 ? 'COIN NEWS:\n' + c.coinNews.map((n,i) => `${i+1}. ${n.headline}`).join('\n') : 'No recent coin-specific news.'}
-MACRO NEWS:\n${c.macroNews.map((n,i) => `${i+1}. ${n.headline}`).join('\n')}`;
+  var parts = [
+    'COIN: ' + c.name + ' (' + c.sym + ') | Price: $' + c.price.toLocaleString() + ' | 24h: ' + c.chg24.toFixed(2) + '% | 7D: ' + c.chg7.toFixed(2) + '% | 30D: ' + c.chg30.toFixed(2) + '%',
+    'Market Cap: ' + c.fmtN(c.mktCap) + ' | FDV: ' + c.fmtN(c.fdv) + ' | Rank: #' + c.rank + ' | Volume: ' + c.fmtN(c.vol24),
+    'Supply: ' + (c.circ ? c.circ.toLocaleString() : 'N/A') + ' / ' + (c.maxSup ? c.maxSup.toLocaleString() : 'Unlimited') + ' | ATH: $' + c.ath.toLocaleString() + ' (' + c.athChg.toFixed(1) + '% away)',
+    'Sentiment: ' + c.sentUp.toFixed(0) + '% bullish | BTC Dom: ' + c.btcDom + '% | Total Mkt: ' + c.fmtN(c.totalMkt) + ' (' + c.mktChg + '% 24h)',
+  ];
+  if (c.coinNews.length > 0) {
+    parts.push('COIN NEWS:');
+    c.coinNews.forEach(function(n, i) { parts.push((i+1) + '. ' + n.headline); });
+  } else { parts.push('No recent coin-specific news.'); }
+  parts.push('MACRO NEWS:');
+  c.macroNews.forEach(function(n, i) { parts.push((i+1) + '. ' + n.headline); });
+  return parts.join('\n');
 }
 
 async function streamAI(prompt, maxTokens) {
@@ -110,7 +117,7 @@ async function streamAI(prompt, maxTokens) {
       'anthropic-version': '2023-06-01',
     },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-6',
+      model: 'claude-haiku-4-5-20251001',
       max_tokens: maxTokens,
       stream: true,
       messages: [{ role: 'user', content: prompt }],
@@ -124,6 +131,29 @@ export default async function handler(req) {
   const { searchParams } = new URL(req.url);
   const coinId = (searchParams.get('id') || '').toLowerCase();
   const mode   = searchParams.get('mode') || 'summary'; // 'summary' or 'deep'
+
+  // Market overview mode — no coinId needed
+  if (mode === 'market') {
+    const mk = 'market_overview';
+    if (_cache[mk] && Date.now() - _cache[mk].ts < CACHE_TTL) {
+      return new Response(_cache[mk].text, { headers: {...CORS, 'Content-Type':'text/plain', 'X-Cache':'HIT'} });
+    }
+    const gData = await sf('https://api.coingecko.com/api/v3/global');
+    const cNews = await fetch('https://finnhub.io/api/v1/news?category=crypto&token=' + FINNHUB).then(function(r){return r.ok?r.json():[];}).catch(function(){return [];});
+    const g = (gData && gData.data) ? gData.data : {};
+    const btcD = (g.market_cap_percentage && g.market_cap_percentage.btc) ? g.market_cap_percentage.btc.toFixed(1) : '?';
+    const totM = (g.total_market_cap && g.total_market_cap.usd) ? g.total_market_cap.usd : 0;
+    const mChg = g.market_cap_change_percentage_24h_usd ? g.market_cap_change_percentage_24h_usd.toFixed(2) : '?';
+    function fmtB(n){if(!n)return 'N/A';if(n>=1e12)return '$'+(n/1e12).toFixed(2)+'T';if(n>=1e9)return '$'+(n/1e9).toFixed(2)+'B';return '$'+n.toFixed(0);}
+    const hdls = Array.isArray(cNews) ? cNews.slice(0,6).map(function(n,i){return (i+1)+'. '+n.headline;}).join('\n') : 'No news.';
+    const mp = 'You are CryptikrAI. Write a 4-5 sentence institutional crypto market briefing in plain prose. No headers, no bullets, no markdown. Direct, specific numbers only.\n\nMarket Cap: ' + fmtB(totM) + ' (' + mChg + '% 24h) | BTC Dominance: ' + btcD + '% | Active Coins: ' + (g.active_cryptocurrencies||'?') + '\nTop News:\n' + hdls + '\n\nWrite 4-5 connected sentences: market structure with numbers, top catalyst from news, BTC dominance signal, key risk or opportunity. Plain prose. Each sentence ends with a period.';
+    const mr = await streamAI(mp, 300);
+    if (!mr.ok) return new Response('Market failed', {status:500, headers:CORS});
+    const reader2 = mr.body.getReader(); const dec2 = new TextDecoder(); let mt = '';
+    while(true){const {done,value}=await reader2.read();if(done)break;for(const ln of dec2.decode(value,{stream:true}).split('\n')){if(!ln.startsWith('data:'))continue;const dd=ln.slice(5).trim();if(dd==='[DONE]')continue;try{mt+=JSON.parse(dd).delta?.text||'';}catch(e){}}}
+    _cache[mk] = {ts:Date.now(), text:mt};
+    return new Response(mt, {headers:{...CORS,'Content-Type':'text/plain','X-Cache':'MISS'}});
+  }
 
   if (!coinId || !ANTHROPIC_KEY) {
     return new Response('Missing params', { status: 400, headers: CORS });

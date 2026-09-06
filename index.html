@@ -336,8 +336,13 @@ async function loadAI() {
     if (!r.ok) throw new Error();
     var text = await r.text();
     if (text && text.length > 10) {
-      var clean = text.replace(/^#+\s*/gm,'').replace(/[*][*]/g,'').trim();
-      if (el) el.innerHTML = clean;
+      // Strip any markdown artifacts
+      var clean = text
+        .replace(/^#+\s*/gm, '')
+        .replace(/[*][*](.+?)[*][*]/g, '$1')
+        .replace(/^[-*]\s+/gm, '')
+        .trim();
+      if (el) el.textContent = clean;
       if (btn) btn.style.display = 'inline-block';
       if (upd) upd.textContent = 'Updated ' + new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
     }

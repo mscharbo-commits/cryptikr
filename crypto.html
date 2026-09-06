@@ -195,9 +195,10 @@ function renderCoin(c) {
     + '<div class="card"><div class="card-title">Price Performance</div>'
     + perfRow('24h', chg24) + perfRow('7D', c.chg7) + perfRow('30D', c.chg30) + perfRow('1Y', c.chg1y)
     + '</div>'
-    + '<div class="card" id="dd-card"><div class="card-title">🧠 CryptikrAI Deep Dive</div>'
-    + '<button class="dd-btn" id="dd-btn" onclick="runDeepDive()">Generate AI Analysis</button>'
-    + '<div class="dd-output" id="dd-output" style="display:none;"></div>'
+    + '<div class="card" id="dd-card"><div class="card-title">🧠 CryptikrAI Analysis</div>'
+    + '<div id="dd-summary" style="font-size:13px;color:#94A3B8;line-height:1.7;margin-bottom:14px;min-height:40px;">Loading summary...</div>'
+    + '<button class="dd-btn" id="dd-btn" onclick="runDeepDive()" style="display:none;">📊 Full Deep Dive →</button>'
+    + '<div class="dd-output" id="dd-output"></div>'
     + '</div>'
     + '<div class="card" id="news-card"><div class="card-title">📰 Latest News</div>'
     + '<div id="news-list"><div style="color:#475569;font-size:13px;">Loading news...</div></div>'
@@ -233,6 +234,7 @@ function renderCoin(c) {
   document.title = sym + ' ' + priceStr + ' — Cryptikr';
   setTimeout(function() { loadTVChart(currentCoinId, c.tvSym); }, 400);
   loadNews(currentCoinId);
+  loadSummary(currentCoinId);
 }
 
 function loadTVChart(coinId, tvSymOverride) {
@@ -296,23 +298,42 @@ async function loadNews(coinId) {
   } catch(e) { if(list) list.innerHTML = '<div style="color:#475569;font-size:13px;">Could not load news.</div>'; }
 }
 
+async function loadSummary(coinId) {
+  var sumEl = document.getElementById('dd-summary');
+  var btn   = document.getElementById('dd-btn');
+  if (!sumEl) return;
+  try {
+    var resp = await fetch('/api/deepdive?id='+encodeURIComponent(coinId)+'&mode=summary');
+    if (!resp.ok) throw new Error();
+    var text = await resp.text();
+    if (text && text.length > 10) {
+      sumEl.innerHTML = '<p style="color:#94A3B8;">'+text+'</p>';
+      if (btn) btn.style.display = 'block';
+    } else {
+      sumEl.innerHTML = '<span style="color:#475569;font-size:12px;">Summary unavailable.</span>';
+      if (btn) btn.style.display = 'block';
+    }
+  } catch(e) {
+    sumEl.innerHTML = '<span style="color:#475569;font-size:12px;">Could not load summary.</span>';
+    if (btn) { btn.style.display = 'block'; }
+  }
+}
+
 async function runDeepDive() {
   var btn = document.getElementById('dd-btn');
   var out = document.getElementById('dd-output');
   if (!btn || !out) return;
   btn.disabled = true;
-  btn.innerHTML = '<span class="dd-spinner"></span>Analyzing '+currentCoinId+'...';
-  out.style.display = 'block';
-  out.innerHTML = '<div style="color:#475569;font-size:13px;">Gathering market data, news, and macro context...</div>';
+  btn.innerHTML = '<span class="dd-spinner"></span>Running deep analysis...';
+  out.innerHTML = '';
 
   try {
-    var resp = await fetch('/api/deepdive?id='+encodeURIComponent(currentCoinId));
+    var resp = await fetch('/api/deepdive?id='+encodeURIComponent(currentCoinId)+'&mode=deep');
     if (!resp.ok) throw new Error('Analysis failed');
 
     var reader = resp.body.getReader();
     var decoder = new TextDecoder();
     var raw = '';
-    out.innerHTML = '';
 
     while (true) {
       var result = await reader.read();
@@ -326,20 +347,16 @@ async function runDeepDive() {
         if (data === '[DONE]') continue;
         try {
           var parsed = JSON.parse(data);
-          var delta = parsed.delta?.text || '';
-          if (delta) {
-            raw += delta;
-            out.innerHTML = formatDD(raw);
-            out.scrollIntoView({behavior:'smooth', block:'nearest'});
-          }
+          var delta = parsed.delta && parsed.delta.text ? parsed.delta.text : '';
+          if (delta) { raw += delta; out.innerHTML = formatDD(raw); }
         } catch(e) {}
       }
     }
-    btn.innerHTML = '↻ Regenerate Analysis';
+    btn.innerHTML = '↻ Regenerate Deep Dive';
     btn.disabled = false;
   } catch(e) {
     out.innerHTML = '<div style="color:#EF4444;font-size:13px;">Analysis failed. Try again.</div>';
-    btn.innerHTML = 'Generate AI Analysis';
+    btn.innerHTML = '📊 Full Deep Dive →';
     btn.disabled = false;
   }
 }

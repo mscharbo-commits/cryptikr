@@ -356,29 +356,10 @@ async function runMarketDeepDive() {
   out.innerHTML = '<p style="color:#475569;font-size:13px;">Gathering global crypto data and news...</p>';
 
   try {
-    var resp = await fetch('/api/deepdive?mode=deep&id=bitcoin');
+    var resp = await fetch('/api/deepdive?mode=market&id=market');
     if (!resp.ok) throw new Error();
-    var reader = resp.body.getReader();
-    var decoder = new TextDecoder();
-    var raw = '';
-    out.innerHTML = '';
-    while (true) {
-      var result = await reader.read();
-      if (result.done) break;
-      var chunk = decoder.decode(result.value, {stream:true});
-      var lines = chunk.split("\n");
-      for (var i = 0; i < lines.length; i++) {
-        var line = lines[i].trim();
-        if (!line.startsWith('data:')) continue;
-        var data = line.slice(5).trim();
-        if (data === '[DONE]') continue;
-        try {
-          var parsed = JSON.parse(data);
-          var delta = parsed.delta && parsed.delta.text ? parsed.delta.text : '';
-          if (delta) { raw += delta; out.innerHTML = formatHomeDD(raw); }
-        } catch(e) {}
-      }
-    }
+    var text = await resp.text();
+    out.innerHTML = formatHomeDD(text);
     btn.innerHTML = '▲ Collapse';
     btn.disabled = false;
   } catch(e) {

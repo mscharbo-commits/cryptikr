@@ -1,4 +1,9 @@
 {
+  "functions": {
+    "api/deepdive.js": {
+      "maxDuration": 60
+    }
+  },
   "routes": [
     {
       "src": "/crypto/(.*)",

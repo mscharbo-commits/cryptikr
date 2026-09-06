@@ -345,15 +345,13 @@ async function runDeepDive() {
 }
 
 function formatDD(text) {
-  return text
-    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/
-
-/g, '</p><p>')
-    .replace(/^(?!<[h])/gm, '')
-    .replace(/<p><h/g, '<h')
-    .replace(/<\/h2><\/p>/g, '</h2>');
+  var out = text;
+  out = out.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+  out = out.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  out = out.split('\n\n').join('</p><p>');
+  out = '<p>' + out + '</p>';
+  out = out.replace(/<p><h2>/g, '<h2>').replace(/<\/h2><\/p>/g, '</h2>');
+  return out;
 }
 
 function goSearch() {

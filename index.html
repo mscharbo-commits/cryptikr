@@ -366,8 +366,7 @@ async function runMarketDeepDive() {
       var result = await reader.read();
       if (result.done) break;
       var chunk = decoder.decode(result.value, {stream:true});
-      var lines = chunk.split('
-');
+      var lines = chunk.split("\n");
       for (var i = 0; i < lines.length; i++) {
         var line = lines[i].trim();
         if (!line.startsWith('data:')) continue;
@@ -392,10 +391,8 @@ async function runMarketDeepDive() {
 function formatHomeDD(text) {
   var out = text;
   out = out.replace(/^## (.+)$/gm, '<h2>$1</h2>');
-  out = out.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-  out = out.split('
-
-').join('</p><p>');
+  out = out.replace(/[*][*](.+?)[*][*]/g, "<strong>$1</strong>");
+  out = out.split("\n\n").join("</p><p>");
   out = '<p>' + out + '</p>';
   out = out.replace(/<p><h2>/g, '<h2>').replace(/<\/h2><\/p>/g, '</h2>');
   return out;

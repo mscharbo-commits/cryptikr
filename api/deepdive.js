@@ -171,6 +171,59 @@ Two sentences only. First sentence: price action and momentum with specific numb
     });
   }
 
+  // Market overview — 2-sentence summary of the whole crypto market
+  if (mode === 'market') {
+    const cacheKey2 = 'market_overview';
+    if (_cache[cacheKey2] && Date.now() - _cache[cacheKey2].ts < CACHE_TTL) {
+      return new Response(_cache[cacheKey2].text, {
+        headers: { ...CORS, 'Content-Type': 'text/plain', 'X-Cache': 'HIT' }
+      });
+    }
+    const [globalData, cryptoNews] = await Promise.all([
+      sf('https://api.coingecko.com/api/v3/global'),
+      fetch(`https://finnhub.io/api/v1/news?category=crypto&token=${FINNHUB}`).then(r => r.ok ? r.json() : []).catch(() => []),
+    ]);
+    const g = globalData?.data || {};
+    const btcDom = g.market_cap_percentage?.btc?.toFixed(1) || '?';
+    const totalMkt = g.total_market_cap?.usd || 0;
+    const mktChg = g.market_cap_change_percentage_24h_usd?.toFixed(2) || '?';
+    function fmtBig(n) {
+      if (!n) return 'N/A';
+      if (n >= 1e12) return '$' + (n/1e12).toFixed(2) + 'T';
+      if (n >= 1e9)  return '$' + (n/1e9).toFixed(2) + 'B';
+      return '$' + n.toFixed(0);
+    }
+    const headlines = Array.isArray(cryptoNews) ? cryptoNews.slice(0, 6).map((n,i) => `${i+1}. ${n.headline}`).join('\n') : 'No news available.';
+    const mktPrompt = `You are CryptikrAI. Write exactly 3 sentences giving an institutional overview of the crypto market right now. Direct, specific numbers, no fluff.
+
+Total Market Cap: ${fmtBig(totalMkt)} (${mktChg}% 24h) | BTC Dominance: ${btcDom}% | Active coins: ${g.active_cryptocurrencies || '?'}
+Top crypto news headlines:
+${headlines}
+
+Three sentences: (1) Overall market state with specific numbers. (2) Most important macro catalyst from the news. (3) What sophisticated investors should watch.`;
+
+    const mktResp = await streamAI(mktPrompt, 200);
+    if (!mktResp.ok) return new Response('Market summary failed', { status: 500, headers: CORS });
+    const rdr = mktResp.body.getReader();
+    const dec = new TextDecoder();
+    let full2 = '';
+    while (true) {
+      const { done, value } = await rdr.read();
+      if (done) break;
+      const lines = dec.decode(value, { stream: true }).split('\n');
+      for (const line of lines) {
+        if (!line.startsWith('data:')) continue;
+        const data = line.slice(5).trim();
+        if (data === '[DONE]') continue;
+        try { full2 += JSON.parse(data).delta?.text || ''; } catch(e) {}
+      }
+    }
+    _cache[cacheKey2] = { ts: Date.now(), text: full2 };
+    return new Response(full2, {
+      headers: { ...CORS, 'Content-Type': 'text/plain', 'X-Cache': 'MISS' }
+    });
+  }
+
   // Deep dive — streamed, 5 sections
     const prompt = `You are CryptikrAI, an elite institutional crypto analyst. Write a comprehensive deep dive on ${c.name} (${c.sym}). Be authoritative, direct, and data-driven — specific numbers in every sentence. No hedging language. No disclaimers. Write as if this is a briefing for a hedge fund portfolio manager.
 

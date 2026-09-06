@@ -104,6 +104,17 @@ nav{background:rgba(10,14,26,.95);backdrop-filter:blur(12px);border-bottom:1px s
 .news-src{font-size:10px;color:var(--accent);font-weight:700;margin-bottom:5px;text-transform:uppercase;letter-spacing:.06em;}
 .news-hl{font-size:13px;font-weight:600;color:#F0F4FF;line-height:1.45;margin-bottom:4px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;}
 .news-ago{font-size:10px;color:#475569;}
+/* TICKER BAR */
+.ticker-bar{background:#080C18;border-bottom:1px solid #1E2D45;height:40px;overflow:hidden;display:flex;align-items:center;}
+.ticker-scroll{display:flex;gap:0;animation:ticker-scroll 50s linear infinite;white-space:nowrap;align-items:center;}
+.ticker-scroll:hover{animation-play-state:paused;}
+.ticker-item{display:flex;align-items:center;gap:8px;padding:0 18px;height:40px;border-right:1px solid #1A2236;cursor:pointer;transition:background .15s;flex-shrink:0;text-decoration:none;}
+.ticker-item:hover{background:#111827;}
+.ticker-sym{font-size:12px;font-weight:700;font-family:'JetBrains Mono',monospace;color:#E5E9F0;}
+.ticker-price{font-size:12px;font-family:'JetBrains Mono',monospace;color:#94A3B8;}
+.ticker-chg{font-size:11px;font-family:'JetBrains Mono',monospace;font-weight:600;}
+.ticker-up{color:#10B981;}.ticker-dn{color:#EF4444;}
+@keyframes ticker-scroll{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
 /* POWERED BY */
 .powered{text-align:center;padding:32px;border-top:1px solid var(--border);margin-top:32px;}
 .powered a{color:var(--text3);font-size:12px;text-decoration:none;}
@@ -402,14 +413,41 @@ async function loadNews() {
   } catch(e) { if(grid) grid.innerHTML='<p style="color:#475569;font-size:13px;">News unavailable.</p>'; }
 }
 
+function loadTicker() {
+  fetch('/api/market').then(function(r) { return r.ok ? r.json() : []; }).then(function(coins) {
+    if (!Array.isArray(coins) || !coins.length) return;
+    var scroll = document.getElementById('ticker-scroll');
+    if (!scroll) return;
+    function makeItems() {
+      return coins.map(function(c) {
+        var up = (c.price_change_percentage_24h || 0) >= 0;
+        var pct = (c.price_change_percentage_24h || 0).toFixed(2);
+        var price = c.current_price >= 1000 ? '$' + Math.round(c.current_price).toLocaleString()
+          : c.current_price >= 1 ? '$' + c.current_price.toFixed(2) : '$' + c.current_price.toFixed(4);
+        var id = c.id || 'bitcoin';
+        return '<a class="ticker-item" href="/crypto/' + id + '">'
+          + '<span class="ticker-sym">' + (c.symbol||'').toUpperCase() + '</span>'
+          + '<span class="ticker-price">' + price + '</span>'
+          + '<span class="ticker-chg ' + (up ? 'ticker-up' : 'ticker-dn') + '">' + (up ? '+' : '') + pct + '%</span>'
+          + '</a>';
+      }).join('');
+    }
+    var items = makeItems();
+    scroll.innerHTML = items + items;
+    scroll.style.animationDuration = (coins.length * 3.5) + 's';
+  }).catch(function() {});
+}
+
 // Load everything
 loadGlobal();
 loadMarket();
 loadAI();
 loadNews();
+loadTicker();
 setInterval(loadMarket, 60000);
 setInterval(loadGlobal, 300000);
 setInterval(loadNews, 300000);
+setInterval(loadTicker, 60000);
 </script>
 </body>
 </html>

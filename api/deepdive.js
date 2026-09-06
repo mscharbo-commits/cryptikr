@@ -1,4 +1,4 @@
-export const config = { runtime: 'edge', maxDuration: 60, supportsResponseStreaming: true };
+// Serverless function — allows 60s timeout for Sonnet streaming
 
 const CORS = { 'Access-Control-Allow-Origin': '*', 'Cache-Control': 'no-store' };
 const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY || '';
@@ -187,7 +187,7 @@ export default async function handler(req) {
     const ethDom2 = (g2.market_cap_percentage && g2.market_cap_percentage.eth) ? g2.market_cap_percentage.eth.toFixed(1) : '?';
     const hdls2 = Array.isArray(cNews2) ? cNews2.slice(0,8).map(function(n,i){return (i+1)+'. '+n.headline;}).join('\n') : 'No news.';
     const dp = 'You are CryptikrAI. Write an institutional crypto market deep dive. Use ONLY these exact section headers with --- dividers. No other markdown. Complete every section fully.\n\n' + 'MARKET DATA:\nTotal Market Cap: ' + fmtB2(totM2) + ' (' + mChg2 + '% 24h) | BTC Dom: ' + btcDom2 + '% | ETH Dom: ' + ethDom2 + '%\nBTC: $' + (btc2.usd||0).toLocaleString() + ' (' + (btc2.usd_24h_change||0).toFixed(2) + '% 24h)\nETH: $' + (eth2.usd||0).toLocaleString() + ' (' + (eth2.usd_24h_change||0).toFixed(2) + '% 24h)\nSOL: $' + (sol2.usd||0).toLocaleString() + ' (' + (sol2.usd_24h_change||0).toFixed(2) + '% 24h)\n\nNEWS:\n' + hdls2 + '\n\nFormat exactly:\n\n## Market Structure\n[3 sentences: market cap context, BTC vs ETH momentum, volume signal]\n\n## Capital Rotation\n[3 sentences: what ' + btcDom2 + '% BTC dominance means, rotation signals, trigger for altseason]\n\n## News Catalysts\n[3 sentences: top bullish catalyst with price impact, top bearish risk with downside, what market is mispricing]\n\n## Bull vs Bear\n[Bull scenario with market cap target and probability. Bear scenario with market cap downside and probability.]\n\n## Positioning\n[3 sentences: exact allocation percentages, best trade this week, what invalidates the view]';
-    streamAI(dp, 1200, 'claude-haiku-4-5-20251001');
+    streamAI(dp, 1500, 'claude-sonnet-4-6');
     if (!dr.ok) return new Response('Deep dive failed', {status:500, headers:CORS});
     return new Response(dr.body, {headers:{'Content-Type':'text/event-stream','Access-Control-Allow-Origin':'*','Cache-Control':'no-store'}});
   }

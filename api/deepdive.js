@@ -150,15 +150,15 @@ export default async function handler(req) {
     const headlines = Array.isArray(cNews)
       ? cNews.slice(0, 6).map((n, i) => `${i+1}. ${n.headline}`).join('\n')
       : 'No news.';
-    const mPrompt = `You are CryptikrAI. Write 3 complete sentences giving an institutional crypto market overview. Each sentence must end with a period. Be specific and direct.
+     const mPrompt = `You are CryptikrAI, an institutional crypto market analyst. Write a 4-5 sentence market briefing in plain prose — no headers, no bullet points, no markdown. Write as if briefing a hedge fund PM before market open. Be direct, specific, use real numbers.
 
-Total Market Cap: ${fmtBig(totM)} (${mChg}% 24h) | BTC Dominance: ${btcDom}% | Active coins: ${g.active_cryptocurrencies || '?'}
-Top news:
+Market Data: Total Market Cap ${fmtBig(totM)} (${mChg}% 24h) | BTC Dominance ${btcDom}% | Active Coins ${g.active_cryptocurrencies || '?'}
+Top News Headlines:
 ${headlines}
 
-Sentence 1: Overall market state with specific numbers. Sentence 2: Most important catalyst or risk. Sentence 3: What institutional investors should watch right now.`;
+Write 4-5 connected sentences covering: (1) current market structure and momentum with specific numbers, (2) the most important macro catalyst from the news, (3) what BTC dominance signals about capital rotation, (4) the key risk or opportunity institutional players should act on. Plain prose only. No lists. No headers. End with a complete sentence.\`;
 
-    const mResp = await streamAI(mPrompt, 180);
+    const mResp = await streamAI(mPrompt, 300);
     if (!mResp.ok) return new Response('Market failed', { status: 500, headers: CORS });
     // Read stream inline
     const mReader = mResp.body.getReader();

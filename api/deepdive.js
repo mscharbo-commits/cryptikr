@@ -172,28 +172,28 @@ Two sentences only. First sentence: price action and momentum with specific numb
   }
 
   // Deep dive — streamed, 5 sections
-  const prompt = `You are CryptikrAI, an institutional crypto analyst. Write a deep dive on ${c.name} (${c.sym}). Direct, authoritative, specific numbers in every sentence. No hedging.
+    const prompt = `You are CryptikrAI, an elite institutional crypto analyst. Write a comprehensive deep dive on ${c.name} (${c.sym}). Be authoritative, direct, and data-driven — specific numbers in every sentence. No hedging language. No disclaimers. Write as if this is a briefing for a hedge fund portfolio manager.
 
 ${buildDataBlock(c)}
 
-Write exactly 5 sections, 3-4 sentences each:
+Write exactly 5 sections with 4-6 sentences each — thorough, substantive analysis:
 
-## Market Position
-Price action, momentum, volume, ATH context.
+## Market Position & Momentum
+Analyze price action across all timeframes. Assess momentum indicators and volume quality. Place ${c.sym} in the context of its ATH and historical cycle positioning. What does the current price structure signal about near-term direction?
 
-## Tokenomics
-Supply structure, FDV vs market cap, inflation or scarcity dynamics.
+## Tokenomics & Supply Dynamics
+Break down circulating vs max supply and what that means for inflation pressure or scarcity. Analyze the FDV vs market cap ratio — is this coin fully valued or is there significant dilution risk ahead? Cover any known unlock schedules, emission rates, or burning mechanisms. Conclude with what the supply structure means for the next 6-12 months.
 
-## News Catalysts  
-The 2-3 most important current catalysts from the news above. What they mean for price.
+## News & Macro Catalyst Analysis
+Analyze each relevant news item above and its price impact. Assess how the macro crypto environment — BTC dominance at ${c.btcDom}%, total market at ${c.fmtN(c.totalMkt)} — creates tailwinds or headwinds. Identify the single most consequential catalyst in the current cycle for ${c.sym}. What is the market pricing in vs what it is missing?
 
-## Bull & Bear
-Bull: 2 price targets with specific levels and reasoning. Bear: 2 downside scenarios with levels.
+## Bull Case & Bear Case
+Bull: Build the full bull thesis with 3 specific price targets and the conditions required to hit each. What would drive ${c.sym} to new ATH? Bear: Build the full bear case with 3 specific downside levels and the triggers. What is the maximum pain scenario and what does it look like?
 
-## Entry Strategy
-Key support and resistance levels. Positioning guidance. What invalidates the bull thesis.`;
+## Entry, Risk & Position Sizing
+Identify specific support levels where risk/reward favors entry. Identify resistance levels that must break for the bull thesis to remain intact. Recommend position sizing relative to portfolio risk (aggressive, moderate, conservative). Define the exact conditions that would invalidate the bull thesis and require an exit.\`;
 
-  const resp = await streamAI(prompt, 900);
+  const resp = await streamAI(prompt, 1400);
   if (!resp.ok) return new Response('Deep dive failed', { status: 500, headers: CORS });
 
   return new Response(resp.body, {

@@ -1,6 +1,6 @@
 {
   "functions": {
-    "api/deepdive.js": {
+    "api/deepdive-deep.js": {
       "maxDuration": 60
     }
   },

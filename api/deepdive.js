@@ -112,7 +112,7 @@ async function streamAI(prompt, maxTokens) {
   return fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01' },
-    body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: maxTokens, stream: true, messages: [{ role: 'user', content: prompt }] }),
+    body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: maxTokens, stream: true, messages: [{ role: 'user', content: prompt }] }),
   });
 }
 
@@ -158,7 +158,7 @@ export default async function handler(req) {
     var mChg = gd.market_cap_change_percentage_24h_usd ? gd.market_cap_change_percentage_24h_usd.toFixed(2) : '?';
     var headlines = Array.isArray(cNews) ? cNews.slice(0, 6).map(function(n, i) { return (i+1) + '. ' + n.headline; }).join('\n') : 'No news.';
     var mktPrompt = 'You are CryptikrAI. Write exactly 3 sentences giving an institutional overview of the crypto market right now. Direct, specific numbers, no fluff.\n\nTotal Market Cap: ' + totM + ' (' + mChg + '% 24h) | BTC Dominance: ' + btcD + '% | Active coins: ' + (gd.active_cryptocurrencies || '?') + '\nTop crypto news:\n' + headlines + '\n\nThree sentences: (1) Overall market state with specific numbers. (2) Most important catalyst from the news. (3) What sophisticated investors should watch.';
-    var mResp = await streamAI(mktPrompt, 200);
+    var mResp = await streamAI(mktPrompt, 180);
     if (!mResp.ok) return new Response('Market failed', { status: 500, headers: CORS });
     var mText = await collectStream(mResp);
     _cache[ck] = { ts: Date.now(), text: mText };
@@ -171,7 +171,7 @@ export default async function handler(req) {
   // SUMMARY MODE
   if (mode === 'summary') {
     var sPrompt = 'You are CryptikrAI. Write exactly 2 sentences summarizing ' + c.name + ' (' + c.sym + ') for an institutional investor. Direct, specific numbers, no fluff.\n\n' + data + '\n\nTwo sentences: (1) Price action and momentum with specific numbers. (2) The single most important catalyst or risk right now.';
-    var sResp = await streamAI(sPrompt, 150);
+    var sResp = await streamAI(sPrompt, 120);
     if (!sResp.ok) return new Response('Summary failed', { status: 500, headers: CORS });
     var sText = await collectStream(sResp);
     _cache[ck] = { ts: Date.now(), text: sText };
@@ -179,9 +179,27 @@ export default async function handler(req) {
   }
 
   // DEEP DIVE MODE - streamed
-  var deepPrompt = 'You are CryptikrAI, an elite institutional crypto analyst. Write a comprehensive deep dive on ' + c.name + ' (' + c.sym + '). Authoritative, direct, specific numbers every sentence. No hedging. No disclaimers. Hedge fund briefing tone.\n\n' + data + '\n\nWrite exactly 5 sections, 4-6 sentences each:\n\n## Market Position & Momentum\nPrice action across all timeframes, momentum, volume quality, ATH context, and near-term direction signal.\n\n## Tokenomics & Supply Dynamics\nCirculating vs max supply, inflation pressure or scarcity, FDV vs market cap dilution risk, unlock schedules or burn mechanisms, 6-12 month supply outlook.\n\n## News & Macro Catalyst Analysis\nAnalyze each news item and its price impact. BTC dominance at ' + c.btcDom + '% and total market at ' + fmtN(c.totalMkt) + ' — tailwinds or headwinds. Most consequential catalyst. What is the market pricing in vs missing?\n\n## Bull Case & Bear Case\nBull: 3 specific price targets with conditions required. What drives ' + c.sym + ' to new ATH? Bear: 3 specific downside levels with triggers. Maximum pain scenario.\n\n## Entry, Risk & Position Sizing\nSpecific support levels for entry. Resistance levels that must break. Position sizing for aggressive/moderate/conservative. Exact conditions that invalidate the bull thesis.';
+  var deepPrompt = 'You are CryptikrAI. Institutional crypto analysis of ' + c.name + ' (' + c.sym + '). Direct, specific numbers, no hedging, no disclaimers. Complete every section fully.
 
-  var dResp = await streamAI(deepPrompt, 1400);
+' + data + '
+
+Write all 5 sections. 3 sentences each. Be concise and complete.
+
+## Market Position
+Price momentum, volume, ATH context.
+
+## Tokenomics
+Supply structure, FDV vs mkt cap, inflation or scarcity.
+
+## News Catalysts
+Top 2-3 catalysts from news above and price impact.
+
+## Bull vs Bear
+Bull: 2 price targets with levels. Bear: 2 downside levels with triggers.
+
+## Entry Strategy
+Key support, resistance, position sizing, thesis invalidation.';
+  var dResp = await streamAI(deepPrompt, 1200);
   if (!dResp.ok) return new Response('Deep dive failed', { status: 500, headers: CORS });
   return new Response(dResp.body, { headers: { 'Content-Type': 'text/event-stream', 'Access-Control-Allow-Origin': '*', 'Cache-Control': 'no-store' } });
 }

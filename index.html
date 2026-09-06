@@ -356,10 +356,24 @@ async function runMktDive() {
   out.style.display = 'block';
   out.innerHTML = '<p style="color:#475569;">Gathering market data and news...</p>';
   try {
-    var r = await fetch('/api/deepdive?mode=market&id=market');
+    var r = await fetch('/api/deepdive?mode=market-deep&id=market');
     if (!r.ok) throw new Error();
-    var text = await r.text();
-    out.innerHTML = fmtDD(text);
+    var reader = r.body.getReader();
+    var dec = new TextDecoder();
+    var raw = '';
+    out.innerHTML = '';
+    while (true) {
+      var res = await reader.read();
+      if (res.done) break;
+      var lines = dec.decode(res.value,{stream:true}).split("\n");
+      for (var i=0;i<lines.length;i++){
+        var ln=lines[i].trim();
+        if(ln.indexOf('data:')!==0)continue;
+        var dd2=ln.slice(5).trim();
+        if(dd2==='[DONE]')continue;
+        try{var p2=JSON.parse(dd2);var t2=(p2.delta&&p2.delta.text)||'';if(t2){raw+=t2;out.innerHTML=fmtDD(raw);}}catch(e){}
+      }
+    }
     btn.innerHTML = '▲ Collapse';
     btn.disabled = false;
   } catch(e) {

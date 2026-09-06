@@ -93,23 +93,13 @@ async function fetchContext(coinId) {
 }
 
 function buildDataBlock(c) {
-  var lines = [
-    'COIN: ' + c.name + ' (' + c.sym + ') | Price: $' + c.price.toLocaleString() + ' | 24h: ' + c.chg24.toFixed(2) + '% | 7D: ' + c.chg7.toFixed(2) + '% | 30D: ' + c.chg30.toFixed(2) + '%',
-    'Market Cap: ' + c.fmtN(c.mktCap) + ' | FDV: ' + c.fmtN(c.fdv) + ' | Rank: #' + c.rank + ' | Volume: ' + c.fmtN(c.vol24),
-    'Supply: ' + (c.circ ? c.circ.toLocaleString() : 'N/A') + ' / ' + (c.maxSup ? c.maxSup.toLocaleString() : 'Unlimited') + ' | ATH: $' + c.ath.toLocaleString() + ' (' + c.athChg.toFixed(1) + '% away)',
-    'Sentiment: ' + c.sentUp.toFixed(0) + '% bullish | BTC Dom: ' + c.btcDom + '% | Total Mkt: ' + c.fmtN(c.totalMkt) + ' (' + c.mktChg + '% 24h)',
-  ];
-  if (c.coinNews.length > 0) {
-    lines.push('COIN NEWS:');
-    c.coinNews.forEach(function(n, i) { lines.push((i+1) + '. ' + n.headline); });
-  } else {
-    lines.push('No recent coin-specific news.');
-  }
-  lines.push('MACRO NEWS:');
-  c.macroNews.forEach(function(n, i) { lines.push((i+1) + '. ' + n.headline); });
-  return lines.join('\n');
+  return `COIN: ${c.name} (${c.sym}) | Price: $${c.price.toLocaleString()} | 24h: ${c.chg24.toFixed(2)}% | 7D: ${c.chg7.toFixed(2)}% | 30D: ${c.chg30.toFixed(2)}%
+Market Cap: ${c.fmtN(c.mktCap)} | FDV: ${c.fmtN(c.fdv)} | Rank: #${c.rank} | Volume: ${c.fmtN(c.vol24)}
+Supply: ${c.circ ? c.circ.toLocaleString() : 'N/A'} / ${c.maxSup ? c.maxSup.toLocaleString() : 'Unlimited'} | ATH: $${c.ath.toLocaleString()} (${c.athChg.toFixed(1)}% away)
+Sentiment: ${c.sentUp.toFixed(0)}% bullish | BTC Dom: ${c.btcDom}% | Total Mkt: ${c.fmtN(c.totalMkt)} (${c.mktChg}% 24h)
+${c.coinNews.length > 0 ? 'COIN NEWS:\n' + c.coinNews.map((n,i) => `${i+1}. ${n.headline}`).join('\n') : 'No recent coin-specific news.'}
+MACRO NEWS:\n${c.macroNews.map((n,i) => `${i+1}. ${n.headline}`).join('\n')}`;
 }
-
 
 async function streamAI(prompt, maxTokens) {
   const resp = await fetch('https://api.anthropic.com/v1/messages', {
@@ -120,7 +110,7 @@ async function streamAI(prompt, maxTokens) {
       'anthropic-version': '2023-06-01',
     },
     body: JSON.stringify({
-      model: 'claude-haiku-4-5-20251001',
+      model: 'claude-sonnet-4-6',
       max_tokens: maxTokens,
       stream: true,
       messages: [{ role: 'user', content: prompt }],
@@ -134,61 +124,6 @@ export default async function handler(req) {
   const { searchParams } = new URL(req.url);
   const coinId = (searchParams.get('id') || '').toLowerCase();
   const mode   = searchParams.get('mode') || 'summary'; // 'summary' or 'deep'
-
-  // MARKET MODE — doesn't need a valid coinId
-  if (mode === 'market') {
-    const mCacheKey = 'market_overview';
-    if (_cache[mCacheKey] && Date.now() - _cache[mCacheKey].ts < CACHE_TTL) {
-      return new Response(_cache[mCacheKey].text, {
-        headers: { ...CORS, 'Content-Type': 'text/plain', 'X-Cache': 'HIT' }
-      });
-    }
-    const [gData, cNews] = await Promise.all([
-      sf('https://api.coingecko.com/api/v3/global'),
-      fetch(`https://finnhub.io/api/v1/news?category=crypto&token=${FINNHUB}`).then(r => r.ok ? r.json() : []).catch(() => []),
-    ]);
-    const g = gData?.data || {};
-    const btcDom = g.market_cap_percentage?.btc?.toFixed(1) || '?';
-    const totM = g.total_market_cap?.usd;
-    const mChg = g.market_cap_change_percentage_24h_usd?.toFixed(2) || '?';
-    function fmtBig(n) {
-      if (!n) return 'N/A';
-      if (n >= 1e12) return '$' + (n/1e12).toFixed(2) + 'T';
-      if (n >= 1e9)  return '$' + (n/1e9).toFixed(2) + 'B';
-      return '$' + n.toFixed(0);
-    }
-    const headlines = Array.isArray(cNews)
-      ? cNews.slice(0, 6).map(function(n, i) { return (i+1) + '. ' + n.headline; }).join('\n')
-      : 'No news.';
-     const mPrompt = `You are CryptikrAI, an institutional crypto market analyst. Write a 4-5 sentence market briefing in plain prose — no headers, no bullet points, no markdown. Write as if briefing a hedge fund PM before market open. Be direct, specific, use real numbers.
-
-Market Data: Total Market Cap ${fmtBig(totM)} (${mChg}% 24h) | BTC Dominance ${btcDom}% | Active Coins ${g.active_cryptocurrencies || '?'}
-Top News Headlines:
-${headlines}
-
-Write 4-5 connected sentences covering: (1) current market structure and momentum with specific numbers, (2) the most important macro catalyst from the news, (3) what BTC dominance signals about capital rotation, (4) the key risk or opportunity institutional players should act on. Plain prose only. No lists. No headers. End with a complete sentence.\`;
-
-    const mResp = await streamAI(mPrompt, 300);
-    if (!mResp.ok) return new Response('Market failed', { status: 500, headers: CORS });
-    // Read stream inline
-    const mReader = mResp.body.getReader();
-    const mDecoder = new TextDecoder();
-    let mText = '';
-    while (true) {
-      const { done, value } = await mReader.read();
-      if (done) break;
-      for (const line of mDecoder.decode(value, { stream: true }).split('\n')) {
-        if (!line.startsWith('data:')) continue;
-        const d2 = line.slice(5).trim();
-        if (d2 === '[DONE]') continue;
-        try { mText += JSON.parse(d2).delta?.text || ''; } catch(e) {}
-      }
-    }
-    _cache[mCacheKey] = { ts: Date.now(), text: mText };
-    return new Response(mText, {
-      headers: { ...CORS, 'Content-Type': 'text/plain', 'X-Cache': 'MISS' }
-    });
-  }
 
   if (!coinId || !ANTHROPIC_KEY) {
     return new Response('Missing params', { status: 400, headers: CORS });
@@ -258,7 +193,7 @@ Bull: 2 price targets with specific levels and reasoning. Bear: 2 downside scena
 ## Entry Strategy
 Key support and resistance levels. Positioning guidance. What invalidates the bull thesis.`;
 
-  const resp = await streamAI(prompt, 1100);
+  const resp = await streamAI(prompt, 900);
   if (!resp.ok) return new Response('Deep dive failed', { status: 500, headers: CORS });
 
   return new Response(resp.body, {

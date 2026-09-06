@@ -501,21 +501,38 @@ function renderTickerPanel() {
   if (!cc || !mc) return;
   if (spd) spd.value = tickerPrefs.speed;
 
-  cc.innerHTML = tickerPrefs.crypto.map(function(id) {
-    var sym = id.replace(/-/g,' ').replace(/\w/g,function(c){return c.toUpperCase();});
-    return '<div class="tp-chip active">'
-      + '<span>' + (id === 'avalanche-2' ? 'AVAX' : id.replace(/-2$/,'').toUpperCase().slice(0,6)) + '</span>'
-      + '<span class="rm" onclick="removeCryptoToken('' + id + '')">✕</span>'
+  // Build crypto chips
+  var html2 = '';
+  tickerPrefs.crypto.forEach(function(id) {
+    var label = id === 'avalanche-2' ? 'AVAX'
+      : id.split('-')[0].toUpperCase().slice(0, 6);
+    html2 += '<div class="tp-chip active">'
+      + '<span>' + label + '</span>'
+      + '<span class="rm" data-id="' + id + '"> ✕</span>'
       + '</div>';
-  }).join('');
+  });
+  cc.innerHTML = html2;
+  cc.querySelectorAll('.rm').forEach(function(el) {
+    el.onclick = function(e) {
+      e.stopPropagation();
+      removeCryptoToken(el.getAttribute('data-id'));
+    };
+  });
 
-  mc.innerHTML = DEFAULT_MARKETS.map(function(sym) {
+  // Build market chips
+  var html3 = '';
+  DEFAULT_MARKETS.forEach(function(sym) {
     var active = tickerPrefs.markets.indexOf(sym) >= 0;
-    return '<div class="tp-chip ' + (active ? 'active' : '') + '" onclick="toggleMarket('' + sym + '')">'
+    html3 += '<div class="tp-chip ' + (active ? 'active' : '') + '" data-sym="' + sym + '">'
       + '<span>' + (MARKET_LABELS[sym] || sym) + '</span>'
       + '</div>';
-  }).join('');
+  });
+  mc.innerHTML = html3;
+  mc.querySelectorAll('.tp-chip').forEach(function(el) {
+    el.onclick = function() { toggleMarket(el.getAttribute('data-sym')); };
+  });
 }
+
 
 function addCryptoToken() {
   var input = document.getElementById('tp-crypto-input');

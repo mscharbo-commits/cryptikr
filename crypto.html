@@ -287,7 +287,7 @@ async function loadNews(coinId) {
     list.innerHTML = items.map(function(n) {
       var ago = n.datetime ? timeAgo(n.datetime) : '';
       return '<div class="news-item">'
-        + (n.image ? '<img class="news-thumb" src="'+n.image+'" onerror="this.style.display='none'"/>' : '')
+        + (n.image ? '<img class="news-thumb" src="'+n.image+'"  />' : '')
         + '<div class="news-body">'
         + '<div class="news-hl"><a href="'+n.url+'" target="_blank" rel="noopener">'+n.headline+'</a></div>'
         + '<div class="news-meta">'+(n.source||'')+(ago?' · '+ago:'')+'</div>'

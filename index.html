@@ -334,7 +334,9 @@ async function loadAISummary() {
     if (!resp.ok) throw new Error();
     var text = await resp.text();
     if (el && text && text.length > 10) {
-      el.innerHTML = '<p style="color:#94A3B8;">' + text + '</p>';
+      // Strip any markdown artifacts
+      var clean = text.replace(/^#+\s*/gm, '').replace(/\*\*/g, '').replace(/\*/g, '').trim();
+      el.innerHTML = '<p style="color:#94A3B8;line-height:1.8;font-size:14px;">' + clean + '</p>';
       if (btn) btn.style.display = 'inline-block';
       var upd = document.getElementById('ai-updated');
       if (upd) upd.textContent = 'Updated ' + new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});

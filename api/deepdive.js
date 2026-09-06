@@ -93,13 +93,23 @@ async function fetchContext(coinId) {
 }
 
 function buildDataBlock(c) {
-  return `COIN: ${c.name} (${c.sym}) | Price: $${c.price.toLocaleString()} | 24h: ${c.chg24.toFixed(2)}% | 7D: ${c.chg7.toFixed(2)}% | 30D: ${c.chg30.toFixed(2)}%
-Market Cap: ${c.fmtN(c.mktCap)} | FDV: ${c.fmtN(c.fdv)} | Rank: #${c.rank} | Volume: ${c.fmtN(c.vol24)}
-Supply: ${c.circ ? c.circ.toLocaleString() : 'N/A'} / ${c.maxSup ? c.maxSup.toLocaleString() : 'Unlimited'} | ATH: $${c.ath.toLocaleString()} (${c.athChg.toFixed(1)}% away)
-Sentiment: ${c.sentUp.toFixed(0)}% bullish | BTC Dom: ${c.btcDom}% | Total Mkt: ${c.fmtN(c.totalMkt)} (${c.mktChg}% 24h)
-${c.coinNews.length > 0 ? 'COIN NEWS:\n' + c.coinNews.map((n,i) => `${i+1}. ${n.headline}`).join('\n') : 'No recent coin-specific news.'}
-MACRO NEWS:\n${c.macroNews.map((n,i) => `${i+1}. ${n.headline}`).join('\n')}`;
+  var lines = [
+    'COIN: ' + c.name + ' (' + c.sym + ') | Price: $' + c.price.toLocaleString() + ' | 24h: ' + c.chg24.toFixed(2) + '% | 7D: ' + c.chg7.toFixed(2) + '% | 30D: ' + c.chg30.toFixed(2) + '%',
+    'Market Cap: ' + c.fmtN(c.mktCap) + ' | FDV: ' + c.fmtN(c.fdv) + ' | Rank: #' + c.rank + ' | Volume: ' + c.fmtN(c.vol24),
+    'Supply: ' + (c.circ ? c.circ.toLocaleString() : 'N/A') + ' / ' + (c.maxSup ? c.maxSup.toLocaleString() : 'Unlimited') + ' | ATH: $' + c.ath.toLocaleString() + ' (' + c.athChg.toFixed(1) + '% away)',
+    'Sentiment: ' + c.sentUp.toFixed(0) + '% bullish | BTC Dom: ' + c.btcDom + '% | Total Mkt: ' + c.fmtN(c.totalMkt) + ' (' + c.mktChg + '% 24h)',
+  ];
+  if (c.coinNews.length > 0) {
+    lines.push('COIN NEWS:');
+    c.coinNews.forEach(function(n, i) { lines.push((i+1) + '. ' + n.headline); });
+  } else {
+    lines.push('No recent coin-specific news.');
+  }
+  lines.push('MACRO NEWS:');
+  c.macroNews.forEach(function(n, i) { lines.push((i+1) + '. ' + n.headline); });
+  return lines.join('\n');
 }
+
 
 async function streamAI(prompt, maxTokens) {
   const resp = await fetch('https://api.anthropic.com/v1/messages', {
@@ -148,7 +158,7 @@ export default async function handler(req) {
       return '$' + n.toFixed(0);
     }
     const headlines = Array.isArray(cNews)
-      ? cNews.slice(0, 6).map((n, i) => `${i+1}. ${n.headline}`).join('\n')
+      ? cNews.slice(0, 6).map(function(n, i) { return (i+1) + '. ' + n.headline; }).join('\n')
       : 'No news.';
      const mPrompt = `You are CryptikrAI, an institutional crypto market analyst. Write a 4-5 sentence market briefing in plain prose — no headers, no bullet points, no markdown. Write as if briefing a hedge fund PM before market open. Be direct, specific, use real numbers.
 

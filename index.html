@@ -504,7 +504,7 @@ function renderTickerPanel() {
   cc.innerHTML = tickerPrefs.crypto.map(function(id) {
     var sym = id.replace(/-/g,' ').replace(/\w/g,function(c){return c.toUpperCase();});
     return '<div class="tp-chip active">'
-      + '<span>' + (id === 'avalanche-2' ? 'AVAX' : id.toUpperCase().slice(0,4)) + '</span>'
+      + '<span>' + (id === 'avalanche-2' ? 'AVAX' : id.replace(/-2$/,'').toUpperCase().slice(0,6)) + '</span>'
       + '<span class="rm" onclick="removeCryptoToken('' + id + '')">✕</span>'
       + '</div>';
   }).join('');
@@ -531,7 +531,7 @@ function addCryptoToken() {
   input.value = '';
 }
 
-function removeCryptoToken(id) {
+function removeCryptoToken(el) { var id = el.getAttribute('data-id');
   tickerPrefs.crypto = tickerPrefs.crypto.filter(function(c) { return c !== id; });
   saveTickerPrefs(tickerPrefs);
   loadTicker();

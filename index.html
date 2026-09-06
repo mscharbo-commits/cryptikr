@@ -118,8 +118,8 @@ nav{background:rgba(10,14,26,.95);backdrop-filter:blur(12px);border-bottom:1px s
 .ticker-crypto{background:rgba(245,158,11,.15);color:#F59E0B;}
 .ticker-market{background:rgba(99,102,241,.15);color:#818CF8;}
 .ticker-up{color:#10B981;}.ticker-dn{color:#EF4444;}
-.ticker-settings-btn{flex-shrink:0;width:40px;height:40px;display:flex;align-items:center;justify-content:center;border-left:1px solid #1A2236;cursor:pointer;color:#475569;transition:color .15s;font-size:14px;}
-.ticker-settings-btn:hover{color:#F59E0B;}
+.ticker-edit-btn{flex-shrink:0;height:40px;padding:0 14px;background:transparent;border:none;border-left:1px solid #1A2236;color:#475569;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;cursor:pointer;font-family:inherit;transition:color .15s;white-space:nowrap;}
+.ticker-edit-btn:hover{color:#F59E0B;}
 .ticker-panel{position:absolute;top:40px;right:0;width:320px;background:#111827;border:1px solid #1E2D45;border-radius:0 0 10px 10px;z-index:200;padding:16px;display:none;box-shadow:0 8px 24px rgba(0,0,0,.4);}
 .ticker-panel.open{display:block;}
 .tp-section{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#475569;margin:12px 0 8px;}
@@ -170,7 +170,7 @@ nav{background:rgba(10,14,26,.95);backdrop-filter:blur(12px);border-bottom:1px s
       <div class="ticker-item"><span class="ticker-sym">Loading...</span></div>
     </div>
   </div>
-  <div class="ticker-settings-btn" onclick="toggleTickerPanel()" title="Customize ticker">⚙</div>
+  <button class="ticker-edit-btn" onclick="toggleTickerPanel()">Edit Ticker</button>
   <div class="ticker-panel" id="ticker-panel">
     <div class="tp-section">Crypto Tokens</div>
     <div class="tp-chips" id="tp-crypto-chips"></div>

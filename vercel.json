@@ -1,4 +1,10 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "api/deepdive.js": {
+      "maxDuration": 60
+    }
+  },
   "routes": [
     {
       "src": "/crypto/(.*)",

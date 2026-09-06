@@ -195,9 +195,10 @@ function renderCoin(c) {
     + '<div class="card"><div class="card-title">Price Performance</div>'
     + perfRow('24h', chg24) + perfRow('7D', c.chg7) + perfRow('30D', c.chg30) + perfRow('1Y', c.chg1y)
     + '</div>'
-    + '<div class="card" id="dd-card"><div class="card-title">🧠 CryptikrAI Deep Dive</div>'
-    + '<button class="dd-btn" id="dd-btn" onclick="runDeepDive()">Generate AI Analysis</button>'
-    + '<div class="dd-output" id="dd-output" style="display:none;"></div>'
+    + '<div class="card" id="dd-card"><div class="card-title">🧠 CryptikrAI Analysis</div>'
+    + '<div id="dd-summary" style="font-size:13px;color:#94A3B8;line-height:1.75;min-height:36px;margin-bottom:12px;">Loading analysis...</div>'
+    + '<button class="dd-btn" id="dd-btn" onclick="runDeepDive()" style="display:none;">📊 Full Deep Dive →</button>'
+    + '<div class="dd-output" id="dd-output" style="margin-top:14px;"></div>'
     + '</div>'
     + '<div class="card" id="news-card"><div class="card-title">📰 Latest News</div>'
     + '<div id="news-list"><div style="color:#475569;font-size:13px;">Loading news...</div></div>'
@@ -233,6 +234,7 @@ function renderCoin(c) {
   document.title = sym + ' ' + priceStr + ' — Cryptikr';
   setTimeout(function() { loadTVChart(currentCoinId, c.tvSym); }, 400);
   loadNews(currentCoinId);
+  loadSummary(currentCoinId);
 }
 
 function loadTVChart(coinId, tvSymOverride) {
@@ -296,53 +298,66 @@ async function loadNews(coinId) {
   } catch(e) { if(list) list.innerHTML = '<div style="color:#475569;font-size:13px;">Could not load news.</div>'; }
 }
 
+async function loadSummary(coinId) {
+  var el  = document.getElementById('dd-summary');
+  var btn = document.getElementById('dd-btn');
+  try {
+    var r = await fetch('/api/deepdive?mode=summary&id=' + encodeURIComponent(coinId));
+    if (!r.ok) throw new Error();
+    var text = await r.text();
+    if (el && text && text.length > 5) {
+      el.innerHTML = text;
+      if (btn) btn.style.display = 'inline-block';
+    }
+  } catch(e) {
+    if (el) el.innerHTML = 'Summary unavailable.';
+    if (btn) btn.style.display = 'inline-block';
+  }
+}
+
 async function runDeepDive() {
   var btn = document.getElementById('dd-btn');
   var out = document.getElementById('dd-output');
   if (!btn || !out) return;
+  if (out.innerHTML && out.style.display !== 'none') { out.innerHTML=''; btn.innerHTML='📊 Full Deep Dive →'; return; }
   btn.disabled = true;
-  btn.innerHTML = '<span class="dd-spinner"></span>Analyzing '+currentCoinId+'...';
-  out.style.display = 'block';
-  out.innerHTML = '<div style="color:#475569;font-size:13px;">Gathering market data, news, and macro context...</div>';
-
+  btn.innerHTML = '⏳ Analyzing ' + currentCoinId + '...';
+  out.innerHTML = '';
   try {
-    var resp = await fetch('/api/deepdive?id='+encodeURIComponent(currentCoinId));
-    if (!resp.ok) throw new Error('Analysis failed');
-
-    var reader = resp.body.getReader();
-    var decoder = new TextDecoder();
+    var r = await fetch('/api/deepdive?mode=deep&id=' + encodeURIComponent(currentCoinId));
+    if (!r.ok) throw new Error();
+    var reader = r.body.getReader();
+    var dec = new TextDecoder();
     var raw = '';
-    out.innerHTML = '';
-
     while (true) {
-      var result = await reader.read();
-      if (result.done) break;
-      var chunk = decoder.decode(result.value, {stream:true});
-      var lines = chunk.split('\n');
-      for (var i=0; i<lines.length; i++) {
-        var line = lines[i].trim();
-        if (!line.startsWith('data:')) continue;
-        var data = line.slice(5).trim();
-        if (data === '[DONE]') continue;
-        try {
-          var parsed = JSON.parse(data);
-          var delta = parsed.delta?.text || '';
-          if (delta) {
-            raw += delta;
-            out.innerHTML = formatDD(raw);
-            out.scrollIntoView({behavior:'smooth', block:'nearest'});
-          }
-        } catch(e) {}
+      var res = await reader.read();
+      if (res.done) break;
+      var lines = dec.decode(res.value, {stream:true}).split("\n");
+      for (var i=0;i<lines.length;i++) {
+        var ln = lines[i].trim();
+        if (ln.indexOf('data:') !== 0) continue;
+        var dd = ln.slice(5).trim();
+        if (dd === '[DONE]') continue;
+        try { var delta = JSON.parse(dd).delta; if(delta&&delta.text){raw+=delta.text;out.innerHTML=fmtDD(raw);} } catch(e) {}
       }
     }
-    btn.innerHTML = '↻ Regenerate Analysis';
+    btn.innerHTML = '▲ Collapse';
     btn.disabled = false;
   } catch(e) {
-    out.innerHTML = '<div style="color:#EF4444;font-size:13px;">Analysis failed. Try again.</div>';
-    btn.innerHTML = 'Generate AI Analysis';
+    out.innerHTML = '<p style="color:#EF4444;font-size:13px;">Analysis failed. Try again.</p>';
+    btn.innerHTML = '📊 Full Deep Dive →';
     btn.disabled = false;
   }
 }
+
+function fmtDD(text) {
+  var out = text.replace(/^## (.+)$/gm, '<h2 style="font-size:13px;font-weight:700;color:#F0F4FF;margin:14px 0 6px;padding-bottom:4px;border-bottom:1px solid #1E2D45;">$1</h2>');
+  out = out.replace(/[*][*](.+?)[*][*]/g, '<strong style="color:#F0F4FF;">$1</strong>');
+  out = '<p style="color:#94A3B8;font-size:13px;line-height:1.7;margin-bottom:8px;">' + out.split("\n\n").join('</p><p style="color:#94A3B8;font-size:13px;line-height:1.7;margin-bottom:8px;">') + '</p>';
+  out = out.replace(/<p [^>]+><h2/g,'<h2').replace(/<[/]h2><[/]p>/g,'</h2>');
+  return out;
+}
+
 
 function formatDD(text) {
   var out = text;

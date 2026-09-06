@@ -338,7 +338,11 @@ async function runDeepDive() {
         if (ln.indexOf('data:') !== 0) continue;
         var dd = ln.slice(5).trim();
         if (dd === '[DONE]') continue;
-        try { var delta = JSON.parse(dd).delta; if(delta&&delta.text){raw+=delta.text;out.innerHTML=fmtDD(raw);} } catch(e) {}
+        try {
+          var parsed = JSON.parse(dd);
+          var txt = (parsed.delta && parsed.delta.text) || '';
+          if (txt) { raw += txt; out.innerHTML = fmtDD(raw); }
+        } catch(e) {}
       }
     }
     btn.innerHTML = '▲ Collapse';

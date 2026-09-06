@@ -98,13 +98,13 @@ nav{background:rgba(10,14,26,.95);backdrop-filter:blur(12px);border-bottom:1px s
 .ai-deep-output strong{color:#F0F4FF;}
 
 /* NEWS SECTION */
-.news-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:32px;}
-.news-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;cursor:pointer;transition:border-color .2s;text-decoration:none;display:block;}
+.news-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:32px;}
+.news-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.news-card{background:#111827;border:1px solid #1E2D45;border-radius:10px;padding:14px;cursor:pointer;transition:border-color .2s;text-decoration:none;display:block;}
 .news-card:hover{border-color:var(--accent);}
-.news-card-source{font-size:11px;color:var(--accent);font-weight:600;margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em;}
-.news-card-headline{font-size:14px;font-weight:600;color:var(--text);line-height:1.4;margin-bottom:6px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
-.news-card-meta{font-size:11px;color:var(--text3);}
-.news-card-img{width:100%;height:100px;object-fit:cover;border-radius:6px;margin-bottom:10px;}
+.news-card-source{font-size:10px;color:var(--accent);font-weight:700;margin-bottom:5px;text-transform:uppercase;letter-spacing:.06em;}
+.news-card-headline{font-size:13px;font-weight:600;color:#F0F4FF;line-height:1.45;margin-bottom:5px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;}
+.news-card-meta{font-size:10px;color:#475569;}
 
 /* POWERED BY */
 .powered{text-align:center;padding:32px;border-top:1px solid var(--border);margin-top:32px;}
@@ -409,8 +409,7 @@ async function loadNews() {
     grid.innerHTML = items.slice(0,8).map(function(n) {
       var ago = n.datetime ? timeAgo(n.datetime) : '';
       return '<a class="news-card" href="' + n.url + '" target="_blank" rel="noopener">'
-        + (n.image ? '<img class="news-card-img" src="' + n.image + '" />' : '')
-        + '<div class="news-card-source">' + (n.source || 'Crypto') + '</div>'
+        + '<div class="news-card-source">' + (n.source || 'News') + '</div>'
         + '<div class="news-card-headline">' + n.headline + '</div>'
         + '<div class="news-card-meta">' + ago + '</div>'
         + '</a>';

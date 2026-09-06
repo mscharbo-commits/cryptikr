@@ -156,13 +156,10 @@ export default async function handler(req) {
     return new Response(st,{headers:{...CORS,'Content-Type':'text/plain'}});
   }
 
-  // DEEP DIVE — redirect to serverless endpoint
+  // DEEP DIVE — tell client to use /api/deepdive-deep directly
   if(mode==='deep'||mode==='market-deep'){
-    // Forward to the serverless deep dive endpoint
-    var fwdUrl='https://cryptikr.vercel.app/api/deepdive-deep?mode='+mode+'&id='+encodeURIComponent(coinId);
-    var fwd=await fetch(fwdUrl,{headers:{'Content-Type':'application/json'}});
-    if(!fwd.ok)return new Response('Deep dive failed',{status:500,headers:CORS});
-    return new Response(fwd.body,{headers:{'Content-Type':'text/event-stream','Access-Control-Allow-Origin':'*','Cache-Control':'no-store'}});
+    return new Response(JSON.stringify({redirect:'/api/deepdive-deep?mode='+mode+'&id='+encodeURIComponent(coinId)}),
+      {status:307,headers:{...CORS,'Content-Type':'application/json','Location':'/api/deepdive-deep?mode='+mode+'&id='+encodeURIComponent(coinId)}});
   }
 
   return new Response('Invalid mode',{status:400,headers:CORS});

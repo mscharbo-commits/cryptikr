@@ -82,6 +82,32 @@ nav{background:rgba(10,14,26,.95);backdrop-filter:blur(12px);border-bottom:1px s
 .gb-val{font-size:14px;font-weight:700;font-family:'JetBrains Mono',monospace;}
 .gb-val.up{color:var(--green);} .gb-val.dn{color:var(--red);}
 
+/* AI OVERVIEW */
+.ai-card{background:linear-gradient(135deg,rgba(245,158,11,.08),rgba(239,68,68,.08));border:1px solid rgba(245,158,11,.2);border-radius:var(--radius);padding:24px;margin-bottom:32px;}
+.ai-card-header{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+.ai-badge{background:linear-gradient(135deg,#F59E0B,#EF4444);color:#000;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;}
+.ai-summary{font-size:14px;color:#94A3B8;line-height:1.75;margin-bottom:16px;min-height:48px;}
+.ai-deep-btn{background:linear-gradient(135deg,#F59E0B,#EF4444);color:#000;border:none;border-radius:8px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;transition:opacity .2s;}
+.ai-deep-btn:hover{opacity:.9;}
+.ai-spinner{display:inline-block;width:12px;height:12px;border:2px solid rgba(0,0,0,.3);border-top-color:#000;border-radius:50%;animation:spin .6s linear infinite;margin-right:6px;vertical-align:middle;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.ai-deep-output{margin-top:16px;padding-top:16px;border-top:1px solid rgba(245,158,11,.2);display:none;}
+.ai-deep-output h2{font-size:13px;font-weight:700;color:#F0F4FF;margin:14px 0 6px;padding-bottom:6px;border-bottom:1px solid #1E2D45;}
+.ai-deep-output h2:first-child{margin-top:0;}
+.ai-deep-output p{font-size:13px;color:#94A3B8;line-height:1.7;margin-bottom:8px;}
+.ai-deep-output strong{color:#F0F4FF;}
+
+/* NEWS SECTION */
+.news-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:32px;}
+.news-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;cursor:pointer;transition:border-color .2s;text-decoration:none;display:block;}
+.news-card:hover{border-color:var(--accent);}
+.news-card-source{font-size:11px;color:var(--accent);font-weight:600;margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em;}
+.news-card-headline{font-size:14px;font-weight:600;color:var(--text);line-height:1.4;margin-bottom:6px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.news-card-meta{font-size:11px;color:var(--text3);}
+.news-card-img{width:100%;height:100px;object-fit:cover;border-radius:6px;margin-bottom:10px;}
+
+/* POWERED BY */
+.powered{text-align:center;padding:32px;border-top:1px solid var(--border);margin-top:32px;}
 /* POWERED BY */
 .powered{text-align:center;padding:32px;border-top:1px solid var(--border);margin-top:32px;}
 .powered a{color:var(--text3);font-size:12px;text-decoration:none;}
@@ -147,6 +173,39 @@ nav{background:rgba(10,14,26,.95);backdrop-filter:blur(12px);border-bottom:1px s
     <div class="loading-card"></div><div class="loading-card"></div>
     <div class="loading-card"></div><div class="loading-card"></div>
     <div class="loading-card"></div><div class="loading-card"></div>
+  </div>
+</div>
+
+<!-- AI MARKET OVERVIEW -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-title">🧠 CryptikrAI Market Overview</div>
+    <div class="section-sub" id="ai-updated"></div>
+  </div>
+  <div class="ai-card">
+    <div class="ai-card-header">
+      <span class="ai-badge">CryptikrAI</span>
+      <span style="font-size:12px;color:var(--text3);">Live market intelligence · Updated every 30 min</span>
+    </div>
+    <div class="ai-summary" id="ai-summary">Analyzing market conditions...</div>
+    <button class="ai-deep-btn" id="ai-deep-btn" onclick="runMarketDeepDive()" style="display:none;">
+      📊 Full Market Deep Dive →
+    </button>
+    <div class="ai-deep-output" id="ai-deep-output"></div>
+  </div>
+</div>
+
+<!-- INDUSTRY NEWS -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-title">📰 Crypto News</div>
+    <div class="section-sub" id="news-updated"></div>
+  </div>
+  <div class="news-grid" id="news-grid">
+    <div class="loading-card" style="height:140px;"></div>
+    <div class="loading-card" style="height:140px;"></div>
+    <div class="loading-card" style="height:140px;"></div>
+    <div class="loading-card" style="height:140px;"></div>
   </div>
 </div>
 
@@ -258,11 +317,119 @@ async function loadMarket() {
   } catch(e) { console.warn('Market error:', e); }
 }
 
+function timeAgo(ts) {
+  var d = Date.now() - (ts * 1000);
+  var m = Math.floor(d / 60000);
+  if (m < 60) return m + 'm ago';
+  var h = Math.floor(m / 60);
+  if (h < 24) return h + 'h ago';
+  return Math.floor(h / 24) + 'd ago';
+}
+
+async function loadAISummary() {
+  var el = document.getElementById('ai-summary');
+  var btn = document.getElementById('ai-deep-btn');
+  try {
+    var resp = await fetch('/api/deepdive?mode=market&id=market');
+    if (!resp.ok) throw new Error();
+    var text = await resp.text();
+    if (el && text && text.length > 10) {
+      el.innerHTML = '<p style="color:#94A3B8;">' + text + '</p>';
+      if (btn) btn.style.display = 'inline-block';
+      var upd = document.getElementById('ai-updated');
+      if (upd) upd.textContent = 'Updated ' + new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+    }
+  } catch(e) {
+    if (el) el.innerHTML = '<span style="color:#475569;font-size:12px;">Market overview unavailable.</span>';
+    if (btn) btn.style.display = 'inline-block';
+  }
+}
+
+async function runMarketDeepDive() {
+  var btn = document.getElementById('ai-deep-btn');
+  var out = document.getElementById('ai-deep-output');
+  if (!btn || !out) return;
+  if (out.style.display === 'block') { out.style.display = 'none'; btn.innerHTML = '📊 Full Market Deep Dive →'; return; }
+  btn.disabled = true;
+  btn.innerHTML = '<span class="ai-spinner"></span>Analyzing market...';
+  out.style.display = 'block';
+  out.innerHTML = '<p style="color:#475569;font-size:13px;">Gathering global crypto data and news...</p>';
+
+  try {
+    var resp = await fetch('/api/deepdive?mode=deep&id=bitcoin');
+    if (!resp.ok) throw new Error();
+    var reader = resp.body.getReader();
+    var decoder = new TextDecoder();
+    var raw = '';
+    out.innerHTML = '';
+    while (true) {
+      var result = await reader.read();
+      if (result.done) break;
+      var chunk = decoder.decode(result.value, {stream:true});
+      var lines = chunk.split('
+');
+      for (var i = 0; i < lines.length; i++) {
+        var line = lines[i].trim();
+        if (!line.startsWith('data:')) continue;
+        var data = line.slice(5).trim();
+        if (data === '[DONE]') continue;
+        try {
+          var parsed = JSON.parse(data);
+          var delta = parsed.delta && parsed.delta.text ? parsed.delta.text : '';
+          if (delta) { raw += delta; out.innerHTML = formatHomeDD(raw); }
+        } catch(e) {}
+      }
+    }
+    btn.innerHTML = '▲ Collapse';
+    btn.disabled = false;
+  } catch(e) {
+    out.innerHTML = '<p style="color:#EF4444;font-size:13px;">Analysis failed. Try again.</p>';
+    btn.innerHTML = '📊 Full Market Deep Dive →';
+    btn.disabled = false;
+  }
+}
+
+function formatHomeDD(text) {
+  var out = text;
+  out = out.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+  out = out.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  out = out.split('
+
+').join('</p><p>');
+  out = '<p>' + out + '</p>';
+  out = out.replace(/<p><h2>/g, '<h2>').replace(/<\/h2><\/p>/g, '</h2>');
+  return out;
+}
+
+async function loadNews() {
+  var grid = document.getElementById('news-grid');
+  var upd  = document.getElementById('news-updated');
+  try {
+    var resp = await fetch('/api/news?limit=8');
+    if (!resp.ok) throw new Error();
+    var items = await resp.json();
+    if (!items || !items.length) { if(grid) grid.innerHTML = '<p style="color:#475569;font-size:13px;">No news available.</p>'; return; }
+    grid.innerHTML = items.slice(0,8).map(function(n) {
+      var ago = n.datetime ? timeAgo(n.datetime) : '';
+      return '<a class="news-card" href="' + n.url + '" target="_blank" rel="noopener">'
+        + (n.image ? '<img class="news-card-img" src="' + n.image + '" onerror="this.style.display='none'" />' : '')
+        + '<div class="news-card-source">' + (n.source || 'Crypto') + '</div>'
+        + '<div class="news-card-headline">' + n.headline + '</div>'
+        + '<div class="news-card-meta">' + ago + '</div>'
+        + '</a>';
+    }).join('');
+    if (upd) upd.textContent = 'Updated ' + new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+  } catch(e) { if(grid) grid.innerHTML = '<p style="color:#475569;font-size:13px;">News unavailable.</p>'; }
+}
+
 // Load everything
 loadGlobal();
 loadMarket();
+loadAISummary();
+loadNews();
 setInterval(loadMarket, 60000);
 setInterval(loadGlobal, 300000);
+setInterval(loadNews, 300000);
 </script>
 </body>
 </html>

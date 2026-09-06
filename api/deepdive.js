@@ -136,7 +136,11 @@ export default async function handler(req) {
   if (mode === 'market') {
     const mk = 'market_overview';
     if (_cache[mk] && Date.now() - _cache[mk].ts < CACHE_TTL) {
-      return new Response(_cache[mk].text, { headers: {...CORS, 'Content-Type':'text/plain', 'X-Cache':'HIT'} });
+      const ct = _cache[mk].text;
+      // Only serve if complete — starts with capital letter, ends with period
+      if (ct && ct.length > 80 && /^[A-Z]/.test(ct.trim()) && /[.!?]$/.test(ct.trim())) {
+        return new Response(ct, { headers: {...CORS, 'Content-Type':'text/plain', 'X-Cache':'HIT'} });
+      }
     }
     const gData = await sf('https://api.coingecko.com/api/v3/global');
     const cNews = await fetch('https://finnhub.io/api/v1/news?category=crypto&token=' + FINNHUB).then(function(r){return r.ok?r.json():[];}).catch(function(){return [];});

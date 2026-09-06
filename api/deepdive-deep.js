@@ -1,4 +1,7 @@
-const CORS = { 'Access-Control-Allow-Origin': '*', 'Cache-Control': 'no-store' };
+const _deepCache = {};
+const DEEP_TTL = 20 * 60 * 1000;
+
+const CORS = { 'Access-Control-Allow-Origin': '*' };
 const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY || '';
 const FINNHUB = process.env.FINNHUB_KEY || 'd95c889r01qihq3l33k0d95c889r01qihq3l33kg';
 const CG_KEY  = process.env.COINGECKO_API_KEY || '';
@@ -26,16 +29,18 @@ var COIN_KWS = {
   'near':['near protocol','near'],'aptos':['aptos','apt'],'arbitrum':['arbitrum','arb'],
 };
 
-const _deepCache = {};
-const DEEP_TTL = 20 * 60 * 1000;
-
 export default async function handler(req, res) {
-  if (req.method === 'OPTIONS') { res.setHeader('Access-Control-Allow-Origin','*'); res.end(); return; }
+  if (req.method === 'OPTIONS') {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.end(); return;
+  }
+
   var params = new URL(req.url, 'https://cryptikr.vercel.app').searchParams;
   var coinId = (params.get('id') || '').toLowerCase();
   var mode   = params.get('mode') || 'deep';
   var ck = mode + '_' + coinId;
 
+  // Serve from cache
   if (_deepCache[ck] && Date.now() - _deepCache[ck].ts < DEEP_TTL) {
     res.setHeader('Content-Type', 'application/json');
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -44,15 +49,13 @@ export default async function handler(req, res) {
     return;
   }
 
-  // Headers set at response time
-
   var prompt = '';
 
   if (mode === 'market-deep') {
     var results = await Promise.all([
       sf('https://api.coingecko.com/api/v3/global'),
       sf('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana&vs_currencies=usd&include_24hr_change=true&include_market_cap=true'),
-      fetch('https://finnhub.io/api/v1/news?category=crypto&token='+FINNHUB).then(function(r){return r.ok?r.json():[];}).catch(function(){return [];}),
+      fetch('https://finnhub.io/api/v1/news?category=crypto&token=' + FINNHUB).then(function(r){return r.ok?r.json():[];}).catch(function(){return [];}),
     ]);
     var g=(results[0]&&results[0].data)||{};
     var prices=results[1]||{};
@@ -63,14 +66,16 @@ export default async function handler(req, res) {
     var btcDom=(g.market_cap_percentage&&g.market_cap_percentage.btc)?g.market_cap_percentage.btc.toFixed(1):'?';
     var ethDom=(g.market_cap_percentage&&g.market_cap_percentage.eth)?g.market_cap_percentage.eth.toFixed(1):'?';
     var hdls=news.slice(0,8).map(function(n,i){return (i+1)+'. '+n.headline;}).join('\n');
-    prompt = 'You are CryptikrAI, an elite institutional crypto market analyst writing a hedge fund briefing. Be authoritative, direct, use specific numbers in every sentence. Complete all 5 sections fully.\n\nMARKET DATA:\nTotal Market Cap: '+fmtN(totM)+' ('+mChg+'% 24h) | BTC Dominance: '+btcDom+'% | ETH Dominance: '+ethDom+'%\nBTC: $'+(btc.usd||0).toLocaleString()+' ('+(btc.usd_24h_change||0).toFixed(2)+'% 24h) | Mkt Cap: '+fmtN(btc.usd_market_cap)+'\nETH: $'+(eth.usd||0).toLocaleString()+' ('+(eth.usd_24h_change||0).toFixed(2)+'% 24h)\nSOL: $'+(sol.usd||0).toLocaleString()+' ('+(sol.usd_24h_change||0).toFixed(2)+'% 24h)\nActive Coins: '+(g.active_cryptocurrencies||'?')+'\n\nNEWS:\n'+hdls+'\n\nWrite exactly 5 sections, 2 sentences each. Short, specific, complete. Complete every section. End the final section with a complete sentence ending in a period:\n\n## Market Structure & Momentum\nAssess the total market cap level, 24h change direction, BTC vs ETH vs altcoin relative performance, and the risk-on vs risk-off signal from volume patterns.\n\n## BTC Dominance & Capital Rotation\nInterpret what '+btcDom+'% BTC dominance means for institutional positioning. Assess whether capital is consolidating in BTC or rotating into alts. Identify the specific price level or event that triggers meaningful altcoin rotation. Give the timeline.\n\n## News Catalyst Analysis\nIdentify the most bullish catalyst from the headlines and quantify its upside impact. Identify the most bearish risk and its specific downside scenario with numbers. Assess a third catalyst the market is underpricing. State what the market is missing.\n\n## Bull vs Bear Scenarios\nBull case: specific total market cap target, the 2 conditions required, and probability percentage. Bear case: specific market cap downside level, the 2 triggers, and probability percentage. Include BTC price levels for each scenario.\n\n## Positioning & Strategy\nState exact sector allocation percentages (BTC/ETH/alts/stables). Name the single best risk/reward trade this week with entry and target. Identify 2 specific metrics to monitor. State what would invalidate this entire thesis.';
+
+    prompt = 'You are CryptikrAI institutional crypto analyst. Analyze this market data and return ONLY a valid JSON object — no markdown, no explanation, no text outside the JSON.\n\nDATA:\nTotal Market Cap: ' + fmtN(totM) + ' (' + mChg + '% 24h) | BTC Dom: ' + btcDom + '% | ETH Dom: ' + ethDom + '%\nBTC: $' + (btc.usd||0).toLocaleString() + ' (' + (btc.usd_24h_change||0).toFixed(2) + '% 24h)\nETH: $' + (eth.usd||0).toLocaleString() + ' (' + (eth.usd_24h_change||0).toFixed(2) + '% 24h)\nSOL: $' + (sol.usd||0).toLocaleString() + ' (' + (sol.usd_24h_change||0).toFixed(2) + '% 24h)\nActive Coins: ' + (g.active_cryptocurrencies||'?') + '\nNEWS:\n' + hdls + '\n\nReturn this exact JSON structure with substantive analysis in each field:\n{"momentum":"2-3 sentences on market cap level, BTC vs ETH vs alt performance, risk-on/risk-off signal with specific numbers.","rotation":"2-3 sentences on what ' + btcDom + '% BTC dominance signals, capital flow direction, specific trigger for altcoin rotation.","catalysts":"2-3 sentences: most bullish catalyst with quantified impact, most bearish risk with downside level, what market is mispricing.","bull_bear":"Bull: market reaches [X] (+[Y]%) if [2 conditions], prob [Z]%, BTC=$[price]. Bear: market falls to [X] (-[Y]%) if [2 triggers], prob [Z]%, BTC=$[price].","positioning":"Allocation: BTC [X]%, ETH [Y]%, alts [Z]%, stables [W]%. Best trade this week: [specific entry, target, stop]. Thesis fails if [specific level or event]."}';
+
   } else {
     // Coin deep dive
     var coinResults = await Promise.all([
-      sf('https://api.coingecko.com/api/v3/coins/'+coinId+'?localization=false&tickers=false&community_data=false&developer_data=false&sparkline=false'),
-      sf('https://api.coingecko.com/api/v3/simple/price?ids='+coinId+',bitcoin&vs_currencies=usd&include_24hr_change=true&include_market_cap=true&include_24hr_vol=true'),
+      sf('https://api.coingecko.com/api/v3/coins/' + coinId + '?localization=false&tickers=false&community_data=false&developer_data=false&sparkline=false'),
+      sf('https://api.coingecko.com/api/v3/simple/price?ids=' + coinId + ',bitcoin&vs_currencies=usd&include_24hr_change=true&include_market_cap=true&include_24hr_vol=true'),
       sf('https://api.coingecko.com/api/v3/global'),
-      fetch('https://finnhub.io/api/v1/news?category=crypto&token='+FINNHUB).then(function(r){return r.ok?r.json():[];}).catch(function(){return [];}),
+      fetch('https://finnhub.io/api/v1/news?category=crypto&token=' + FINNHUB).then(function(r){return r.ok?r.json():[];}).catch(function(){return [];}),
     ]);
     var detail=coinResults[0], price=coinResults[1], gData=coinResults[2], allNews=coinResults[3];
     var m=(detail&&detail.market_data)||{};
@@ -86,50 +91,54 @@ export default async function handler(req, res) {
     var mktCap=p.usd_market_cap||(m.market_cap&&m.market_cap.usd)||0;
     var btcDom2=(g2.market_cap_percentage&&g2.market_cap_percentage.btc)?g2.market_cap_percentage.btc.toFixed(1):'?';
     var totMkt=(g2.total_market_cap&&g2.total_market_cap.usd)||0;
-    var dataBlock = [
-      name+' ('+sym+') | Price: $'+pr.toLocaleString()+' | 24h: '+chg24.toFixed(2)+'% | 7D: '+(m.price_change_percentage_7d||0).toFixed(2)+'% | 30D: '+(m.price_change_percentage_30d||0).toFixed(2)+'%',
-      'Mkt Cap: '+fmtN(mktCap)+' | FDV: '+fmtN(m.fully_diluted_valuation&&m.fully_diluted_valuation.usd)+' | Rank: #'+(detail&&detail.market_cap_rank||'?')+' | Vol: '+fmtN(p.usd_24h_vol||(m.total_volume&&m.total_volume.usd)),
-      'Supply: '+(m.circulating_supply?m.circulating_supply.toLocaleString():'N/A')+' / '+(m.max_supply?m.max_supply.toLocaleString():'Unlimited')+' | ATH: $'+((m.ath&&m.ath.usd)||0).toLocaleString()+' ('+((m.ath_change_percentage&&m.ath_change_percentage.usd)||0).toFixed(1)+'% away)',
-      'Sentiment: '+((detail&&detail.sentiment_votes_up_percentage)||0).toFixed(0)+'% bullish | BTC Dom: '+btcDom2+'% | Total Mkt: '+fmtN(totMkt),
-      coinNews.length>0?'COIN NEWS:\n'+coinNews.map(function(n,i){return (i+1)+'. '+n.headline;}).join('\n'):'No recent coin news.',
-      'MACRO NEWS:\n'+macroNews.map(function(n,i){return (i+1)+'. '+n.headline;}).join('\n'),
-    ].join('\n');
-    prompt = 'You are CryptikrAI, an elite institutional crypto analyst writing a hedge fund briefing on '+name+' ('+sym+'). Authoritative, direct, specific numbers every sentence. Complete all 5 sections fully.\n\n'+dataBlock+'\n\nWrite exactly 5 sections, 2 sentences each. Short, specific, complete. Complete every section. End the final section with a complete sentence ending in a period:\n\n## Market Position & Momentum\nPrice level and ATH context with specific percentages. Momentum across 24h/7D/30D timeframes. Volume quality — institutional or retail driven. Near-term directional signal.\n\n## Tokenomics & Supply Dynamics\nCirculating vs max supply and what it means for scarcity. FDV vs market cap ratio and dilution risk. Any unlock schedules, emission rates, or burn mechanisms. 6-12 month supply outlook and price impact.\n\n## News & Macro Catalyst Analysis\nMost bullish catalyst from the news and its specific price impact on '+sym+'. Most bearish risk and downside scenario with levels. What the macro environment (BTC at '+btcDom2+'% dominance, total market '+fmtN(totMkt)+') means for '+sym+'. What the market is currently mispricing.\n\n## Bull Case & Bear Case\nBull: price target 1 with conditions and probability. Bull: price target 2 (new ATH scenario) with conditions. Bear: downside level 1 with trigger. Bear: maximum pain level with scenario.\n\n## Entry, Risk & Position Sizing\nSpecific support level for entry with reasoning. Specific resistance that must break for bull thesis. Position sizing guidance for aggressive/moderate/conservative. Write exactly 4 sentences then stop. Sentence 4 must state the exact price that invalidates the bull thesis and end with a period.';
+    var ath=(m.ath&&m.ath.usd)||0;
+    var athChg=(m.ath_change_percentage&&m.ath_change_percentage.usd)||0;
+    var circ=m.circulating_supply||0;
+    var maxSup=m.max_supply||null;
+    var fdv=(m.fully_diluted_valuation&&m.fully_diluted_valuation.usd)||0;
+
+    var dataBlock = name + ' (' + sym + ') | $' + pr.toLocaleString() + ' | 24h: ' + chg24.toFixed(2) + '% | 7D: ' + (m.price_change_percentage_7d||0).toFixed(2) + '% | 30D: ' + (m.price_change_percentage_30d||0).toFixed(2) + '%\n'
+      + 'Mkt Cap: ' + fmtN(mktCap) + ' | FDV: ' + fmtN(fdv) + ' | Rank: #' + ((detail&&detail.market_cap_rank)||'?') + '\n'
+      + 'Supply: ' + (circ?circ.toLocaleString():'N/A') + ' / ' + (maxSup?maxSup.toLocaleString():'Unlimited') + '\n'
+      + 'ATH: $' + ath.toLocaleString() + ' (' + athChg.toFixed(1) + '% away)\n'
+      + 'BTC Dom: ' + btcDom2 + '% | Total Mkt: ' + fmtN(totMkt) + '\n'
+      + (coinNews.length>0 ? 'COIN NEWS:\n'+coinNews.map(function(n,i){return (i+1)+'. '+n.headline;}).join('\n') : 'No coin-specific news.') + '\n'
+      + 'MACRO:\n'+macroNews.map(function(n,i){return (i+1)+'. '+n.headline;}).join('\n');
+
+    prompt = 'You are CryptikrAI institutional crypto analyst. Analyze ' + name + ' (' + sym + ') and return ONLY a valid JSON object — no markdown, no explanation, no text outside the JSON.\n\nDATA:\n' + dataBlock + '\n\nReturn this exact JSON structure:\n{"momentum":"2-3 sentences: price vs ATH, momentum across timeframes, volume quality, near-term direction — all with specific numbers.","tokenomics":"2-3 sentences: circulating vs max supply scarcity, FDV vs market cap dilution risk, inflation pressure or burn dynamics.","catalysts":"2-3 sentences: top bullish catalyst with specific price target, top bearish risk with downside level, what the market is mispricing about ' + sym + '.","bull_bear":"Bull target 1: $[price] ([upside]%) requires [condition], prob [X]%. Bull target 2: $[price] ([upside]%) requires [condition], prob [X]%. Bear level: $[price] ([downside]%) triggered by [condition]. Max pain: $[price] in [scenario].","entry":"Entry: $[price] support level with reasoning. Resistance: $[price] must break for bull thesis. Sizing: aggressive [X]% portfolio at $[price] stop $[price], moderate [Y]% scaled entries, conservative [Z]% waits for [condition]. Invalidation: bull thesis fails on daily close below $[price]."}';
   }
 
-  // Stream from Anthropic Sonnet
+  // Call Anthropic — non-streaming JSON
   var anthropicResp = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
-    headers: { 'Content-Type':'application/json','x-api-key':ANTHROPIC_KEY,'anthropic-version':'2023-06-01' },
-    body: JSON.stringify({ model:'claude-haiku-4-5-20251001', max_tokens:1200, stream:true, messages:[{role:'user',content:prompt}] }),
+    headers: { 'Content-Type':'application/json', 'x-api-key':ANTHROPIC_KEY, 'anthropic-version':'2023-06-01' },
+    body: JSON.stringify({ model:'claude-haiku-4-5-20251001', max_tokens:1000, stream:false, messages:[{role:'user',content:prompt}] }),
   });
 
   if (!anthropicResp.ok) {
-    res.status(500).send('Analysis failed');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.status(500).json({error:'Analysis failed'});
     return;
   }
 
-  var reader = anthropicResp.body.getReader();
-  var dec = new TextDecoder();
-  var fullText = '';
-  var buf = '';
-  try {
-    while (true) {
-      var result = await reader.read();
-      if (result.done) break;
-      var chunk = dec.decode(result.value, { stream: true });
-      if (!res.writableEnded) res.write(chunk);
-      buf += chunk;
-      var lines = buf.split('\n'); buf = lines.pop() || '';
-      for (var i = 0; i < lines.length; i++) {
-        var ln = lines[i].trim();
-        if (ln.indexOf('data:') !== 0) continue;
-        var dd = ln.slice(5).trim();
-        if (dd === '[DONE]') continue;
-        try { var p2 = JSON.parse(dd); fullText += (p2.delta && p2.delta.text) || ''; } catch(e) {}
-      }
-    }
-  } catch(e) { console.error('Stream error:', e); }
-  if (fullText && fullText.length > 100) _deepCache[ck] = { ts: Date.now(), text: fullText };
-  if (!res.writableEnded) res.end();
+  var aiResult = await anthropicResp.json();
+  var text = (aiResult.content && aiResult.content[0] && aiResult.content[0].text) || '';
+
+  // Extract JSON from response
+  var jsonMatch = text.match(/\{[\s\S]*\}/);
+  var analysis = null;
+  if (jsonMatch) {
+    try { analysis = JSON.parse(jsonMatch[0]); } catch(e) {}
+  }
+
+  if (!analysis) {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.status(500).json({error:'Parse failed', raw: text.slice(0,200)});
+    return;
+  }
+
+  _deepCache[ck] = { ts: Date.now(), text: JSON.stringify(analysis) };
+  res.setHeader('Content-Type', 'application/json');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.json(analysis);
 }

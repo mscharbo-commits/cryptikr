@@ -155,6 +155,27 @@ export default async function handler(req) {
     return new Response(mt, {headers:{...CORS,'Content-Type':'text/plain','X-Cache':'MISS'}});
   }
 
+  // Market DEEP DIVE mode — full streaming 5-section analysis
+  if (mode === 'market-deep') {
+    const gData2 = await sf('https://api.coingecko.com/api/v3/global');
+    const btcData = await sf('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana&vs_currencies=usd&include_24hr_change=true&include_market_cap=true');
+    const cNews2 = await fetch('https://finnhub.io/api/v1/news?category=crypto&token=' + FINNHUB).then(function(r){return r.ok?r.json():[];}).catch(function(){return [];});
+    const g2 = (gData2 && gData2.data) ? gData2.data : {};
+    const btc2 = (btcData && btcData.bitcoin) ? btcData.bitcoin : {};
+    const eth2 = (btcData && btcData.ethereum) ? btcData.ethereum : {};
+    const sol2 = (btcData && btcData.solana) ? btcData.solana : {};
+    function fmtB2(n){if(!n)return 'N/A';if(n>=1e12)return '$'+(n/1e12).toFixed(2)+'T';if(n>=1e9)return '$'+(n/1e9).toFixed(2)+'B';return '$'+n.toFixed(0);}
+    const totM2 = (g2.total_market_cap && g2.total_market_cap.usd) ? g2.total_market_cap.usd : 0;
+    const mChg2 = g2.market_cap_change_percentage_24h_usd ? g2.market_cap_change_percentage_24h_usd.toFixed(2) : '?';
+    const btcDom2 = (g2.market_cap_percentage && g2.market_cap_percentage.btc) ? g2.market_cap_percentage.btc.toFixed(1) : '?';
+    const ethDom2 = (g2.market_cap_percentage && g2.market_cap_percentage.eth) ? g2.market_cap_percentage.eth.toFixed(1) : '?';
+    const hdls2 = Array.isArray(cNews2) ? cNews2.slice(0,8).map(function(n,i){return (i+1)+'. '+n.headline;}).join('\n') : 'No news.';
+    const dp = 'You are CryptikrAI, an elite institutional crypto market analyst. Write a comprehensive crypto market deep dive briefing for a hedge fund. Direct, authoritative, specific numbers every sentence. No hedging.\n\nMARKET DATA:\nTotal Market Cap: ' + fmtB2(totM2) + ' (' + mChg2 + '% 24h) | BTC Dominance: ' + btcDom2 + '% | ETH Dominance: ' + ethDom2 + '%\nBTC: $' + (btc2.usd||0).toLocaleString() + ' (' + (btc2.usd_24h_change||0).toFixed(2) + '% 24h) | Market Cap: ' + fmtB2(btc2.usd_market_cap) + '\nETH: $' + (eth2.usd||0).toLocaleString() + ' (' + (eth2.usd_24h_change||0).toFixed(2) + '% 24h)\nSOL: $' + (sol2.usd||0).toLocaleString() + ' (' + (sol2.usd_24h_change||0).toFixed(2) + '% 24h)\nActive Coins: ' + (g2.active_cryptocurrencies||'?') + '\n\nNEWS:\n' + hdls2 + '\n\nWrite exactly 5 sections, 3-4 sentences each:\n\n## Market Structure & Momentum\nTotal market cap trend, BTC vs ETH vs altcoin performance, volume quality, overall risk-on/risk-off signal.\n\n## BTC Dominance & Capital Rotation\nWhat ' + btcDom2 + '% BTC dominance signals. Is capital rotating into alts or consolidating in BTC? What triggers the next rotation.\n\n## News Catalyst Analysis\nAnalyze the top news items. Which catalysts are bullish, which are bearish, and what is the market missing.\n\n## Bull Case & Bear Case for the Market\nBull: 2 scenarios with specific market cap targets. Bear: 2 downside scenarios with levels and triggers.\n\n## Positioning & Strategy\nHow sophisticated investors should be positioned right now. Which sectors (DeFi, L1s, L2s, memes) have best risk/reward. What to watch this week.';
+    const dr = await streamAI(dp, 1100);
+    if (!dr.ok) return new Response('Deep dive failed', {status:500, headers:CORS});
+    return new Response(dr.body, {headers:{'Content-Type':'text/event-stream','Access-Control-Allow-Origin':'*','Cache-Control':'no-store'}});
+  }
+
   if (!coinId || !ANTHROPIC_KEY) {
     return new Response('Missing params', { status: 400, headers: CORS });
   }

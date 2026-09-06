@@ -324,7 +324,7 @@ async function runDeepDive() {
   btn.innerHTML = '⏳ Analyzing ' + currentCoinId + '...';
   out.innerHTML = '';
   try {
-    var r = await fetch('/api/deepdive?mode=deep&id=' + encodeURIComponent(currentCoinId));
+    var r = await fetch('/api/deepdive-deep?mode=deep&id=' + encodeURIComponent(currentCoinId));
     if (!r.ok) throw new Error();
     var reader = r.body.getReader();
     var dec = new TextDecoder();

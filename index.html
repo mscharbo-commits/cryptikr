@@ -409,7 +409,7 @@ async function loadNews() {
     grid.innerHTML = items.slice(0,8).map(function(n) {
       var ago = n.datetime ? timeAgo(n.datetime) : '';
       return '<a class="news-card" href="' + n.url + '" target="_blank" rel="noopener">'
-        + (n.image ? '<img class="news-card-img" src="' + n.image + '" onerror="this.style.display='none'" />' : '')
+        + (n.image ? '<img class="news-card-img" src="' + n.image + '" />' : '')
         + '<div class="news-card-source">' + (n.source || 'Crypto') + '</div>'
         + '<div class="news-card-headline">' + n.headline + '</div>'
         + '<div class="news-card-meta">' + ago + '</div>'

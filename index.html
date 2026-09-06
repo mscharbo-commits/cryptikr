@@ -531,7 +531,7 @@ function addCryptoToken() {
   input.value = '';
 }
 
-function removeCryptoToken(el) { var id = el.getAttribute('data-id');
+function removeCryptoToken(id) {
   tickerPrefs.crypto = tickerPrefs.crypto.filter(function(c) { return c !== id; });
   saveTickerPrefs(tickerPrefs);
   loadTicker();

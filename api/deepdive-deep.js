@@ -102,7 +102,7 @@ export default async function handler(req, res) {
   var anthropicResp = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'Content-Type':'application/json','x-api-key':ANTHROPIC_KEY,'anthropic-version':'2023-06-01' },
-    body: JSON.stringify({ model:'claude-haiku-4-5-20251001', max_tokens:900, stream:true, messages:[{role:'user',content:prompt}] }),
+    body: JSON.stringify({ model:'claude-haiku-4-5-20251001', max_tokens:1000, stream:true, messages:[{role:'user',content:prompt}] }),
   });
 
   if (!anthropicResp.ok) {

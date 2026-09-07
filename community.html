@@ -395,6 +395,7 @@ async function switchRoom(slug, name, desc, roomId) {
   await loadMessages(slug);
   await loadSentiment(slug);
   subscribeToRoom(slug);
+  startFakeActivity(slug);
 }
 
 // ── MESSAGES ──
@@ -629,7 +630,7 @@ async function loadLeaderboard() {
         + '<span>👍 '+u.upvotes+'</span>'
         + '</div></div>';
     }).join('');
-  } catch(e) { document.getElementById('leaderboard').innerHTML = '<div class="empty" style="padding:12px;">Could not load leaderboard.</div>'; }
+  } catch(e) { renderFakeLeaderboard(); }
 }
 
 // ── HOT PICKS ──
@@ -773,12 +774,225 @@ async function init() {
   switchRoom(defaultRoom.slug, defaultRoom.name, defaultRoom.description, defaultRoom.id);
   
   // Load sidebar async — don't block
-  setTimeout(function() { loadLeaderboard(); }, 500);
-  setTimeout(function() { loadHotPicks(); }, 800);
+  renderFakeLeaderboard();
+  renderFakeHotPicks();
+  setTimeout(function() { loadLeaderboard(); }, 1000);
+  setTimeout(function() { loadHotPicks(); }, 1200);
 
   sb.auth.onAuthStateChange(function(event, session) {
     if (event === 'SIGNED_IN') location.reload();
   });
+}
+
+
+// ── FAKE COMMUNITY ENGINE ──────────────────────────────────────────────────
+var FAKE_USERS = [
+  'CryptoWolf','SatoshiMike','MoonTrader','DegenKing','BTCBull99',
+  'EthMaxi','SolanaQueen','AlgoTrader','WhaleAlert','CoinHunter',
+  'BlockchainBob','DeFiDave','AltSeasonAlex','DiamondHands','LeverageLarry',
+  'ChainReaction','GweiGuru','ValidatorVince','CryptoCarla','BitcoinBrian',
+];
+
+var FAKE_MESSAGES = {
+  'general': [
+    'Anyone watching BTC dominance right now?',
+    'This market is wild — saw that 3am candle lol',
+    'FOMC tomorrow could be a big catalyst either way',
+    'Been accumulating since the dip last week',
+    'Volume picking up on spot — bullish sign',
+    'Macro looks rough but on-chain metrics are strong',
+    'Just added to my ETH position on that dip',
+    'Watching stablecoin flows — smart money moving',
+    'CME gap below getting filled? Classic weekend move',
+    'Funding rates neutral — no extreme leverage either way',
+    'Fear and Greed at 68 — historically decent entry zone',
+    'ETF flows have been insane this week fr',
+    'Layer 2s are seriously eating L1 fees right now',
+    'Anyone else getting deja vu of 2021 Q1 vibes?',
+  ],
+  'bitcoin': [
+    'BTC holding the 200 day MA beautifully',
+    'Hash rate at all time highs — miners HODLing',
+    'That halving cycle playbook playing out perfectly',
+    'Institutional buying absorbing every dip rn',
+    'BTC dominance pushing 55% — alt season delayed?',
+    'Long term holders not moving coins at all on-chain',
+    'Weekly close above 70k would be massive technically',
+    'Michael Saylor adding again — not surprised',
+  ],
+  'picks': [
+    'Posted my SOL long — targeting $240 by EOQ',
+    'Took profits on LINK at +31% — was a clean setup',
+    'ETH/BTC pair looking ready for a breakout',
+    'My BTC call from last month aged well',
+    'Cut my DOGE position — thesis changed',
+    'INJ breaking out of a 3-month base',
+    'Added to my ARB bag — think L2s outperform',
+    'SUI momentum play up 22% and still going',
+  ],
+  'macro': [
+    'DXY weakness equals crypto strength historically',
+    'Fed pivot pricing in — risk assets benefiting',
+    'Gold and BTC both up — flight to hard assets',
+    'Real rates still negative in most G7 countries',
+    'M2 money supply expanding globally',
+    'Correlations breaking down — BTC going its own way',
+  ],
+  'ask': [
+    'What is the best cold wallet for large holdings?',
+    'Can anyone explain how liquid staking works?',
+    'How do you track DeFi positions across chains?',
+    'Best DEX for low slippage on large USDC swaps?',
+    'Anyone using Rabby wallet? Worth switching from MetaMask?',
+  ],
+};
+
+var FAKE_PICKS = [
+  {user:'CryptoWolf',  ticker:'BTC',  entry:79400, target:95000, stop:72000, note:'Post-halving accumulation zone'},
+  {user:'MoonTrader',  ticker:'ETH',  entry:3180,  target:4500,  stop:2800,  note:'ETF flows plus Pectra upgrade catalyst'},
+  {user:'SolanaQueen', ticker:'SOL',  entry:162,   target:240,   stop:140,   note:'Ecosystem dominance continuing'},
+  {user:'BTCBull99',   ticker:'LINK', entry:14.2,  target:22,    stop:11.5,  note:'CCIP adoption accelerating'},
+  {user:'AlgoTrader',  ticker:'AVAX', entry:35.8,  target:55,    stop:29,    note:'Subnet activity exploding'},
+  {user:'DegenKing',   ticker:'SUI',  entry:1.82,  target:3.5,   stop:1.40,  note:'TVL growing fastest of any L1'},
+  {user:'EthMaxi',     ticker:'ARB',  entry:1.12,  target:2.0,   stop:0.85,  note:'L2 revenue sharing incoming'},
+  {user:'WhaleAlert',  ticker:'BTC',  entry:81200, target:100000,stop:74000, note:'Six figure BTC this cycle'},
+];
+
+var FAKE_LEADERBOARD = [
+  {name:'CryptoWolf',   picks:23, closed:18, wins:14, ret:67.3},
+  {name:'SolanaQueen',  picks:15, closed:12, wins:9,  ret:52.1},
+  {name:'AlgoTrader',   picks:31, closed:28, wins:19, ret:44.8},
+  {name:'BTCBull99',    picks:8,  closed:7,  wins:5,  ret:38.2},
+  {name:'MoonTrader',   picks:19, closed:14, wins:9,  ret:31.5},
+  {name:'GweiGuru',     picks:12, closed:10, wins:6,  ret:22.7},
+  {name:'EthMaxi',      picks:7,  closed:5,  wins:3,  ret:15.4},
+  {name:'ChainReaction',picks:4,  closed:2,  wins:1,  ret:-4.2},
+];
+
+var FAKE_COLORS = ['#F59E0B','#EF4444','#10B981','#3B82F6','#8B5CF6','#EC4899','#06B6D4','#84CC16'];
+
+function getFakeMsgs(slug) {
+  return FAKE_MESSAGES[slug] || FAKE_MESSAGES['general'];
+}
+
+function injectFakeMsg(username, text) {
+  var area = document.getElementById('messages-area');
+  if (!area) return;
+  var empty = area.querySelector('.empty');
+  if (empty) empty.remove();
+  var color = FAKE_COLORS[username.charCodeAt(0) % FAKE_COLORS.length];
+  var div = document.createElement('div');
+  div.className = 'msg';
+  div.innerHTML = '<div class="msg-avatar" style="background:'+color+';">'+username[0].toUpperCase()+'</div>'
+    + '<div class="msg-body">'
+    + '<div class="msg-header"><span class="msg-user">'+username+'</span>'
+    + getTierBadge(username)
+    + '<span class="msg-time">just now</span></div>'
+    + '<div class="msg-text">'+escHtml(text)+'</div>'
+    + '</div>';
+  area.appendChild(div);
+  area.scrollTop = area.scrollHeight;
+}
+
+function injectFakePick(pick) {
+  var area = document.getElementById('messages-area');
+  if (!area) return;
+  var color = FAKE_COLORS[pick.user.charCodeAt(0) % FAKE_COLORS.length];
+  var upside = (((pick.target - pick.entry) / pick.entry) * 100).toFixed(1);
+  var div = document.createElement('div');
+  div.className = 'msg';
+  div.innerHTML = '<div class="msg-avatar" style="background:'+color+';">'+pick.user[0].toUpperCase()+'</div>'
+    + '<div class="msg-body">'
+    + '<div class="msg-header"><span class="msg-user">'+pick.user+'</span>'
+    + '<span style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px;background:rgba(16,185,129,.15);color:#10B981;margin-left:4px;">Rising</span>'
+    + '<span class="msg-time">just now</span></div>'
+    + '<div class="pick-card">'
+    + '<div class="pick-dir buy">LONG '+pick.ticker+'</div>'
+    + '<div class="pick-prices">'
+    + '<span>Entry: <strong>$'+pick.entry.toLocaleString()+'</strong></span>'
+    + '<span>Target: <strong style="color:var(--green);">$'+pick.target.toLocaleString()+'</strong></span>'
+    + '<span>Stop: <strong style="color:var(--red);">$'+pick.stop.toLocaleString()+'</strong></span>'
+    + '<span>Upside: <strong style="color:var(--green);">+'+upside+'%</strong></span>'
+    + '</div>'
+    + (pick.note ? '<div style="font-size:12px;color:var(--text2);margin-top:6px;">'+escHtml(pick.note)+'</div>' : '')
+    + '</div></div>';
+  area.appendChild(div);
+  area.scrollTop = area.scrollHeight;
+}
+
+function startFakeActivity(slug) {
+  var msgs = getFakeMsgs(slug);
+
+  // Burst of 3-4 messages already there
+  var burst = 3 + Math.floor(Math.random() * 2);
+  for (var i = 0; i < burst; i++) {
+    (function(delay) {
+      setTimeout(function() {
+        var user = FAKE_USERS[Math.floor(Math.random() * FAKE_USERS.length)];
+        var msg  = msgs[Math.floor(Math.random() * msgs.length)];
+        injectFakeMsg(user, msg);
+      }, delay);
+    })(i * 300);
+  }
+
+  // Drop a pick in picks/general rooms after 2s
+  if (slug === 'picks' || slug === 'general') {
+    setTimeout(function() {
+      var pick = FAKE_PICKS[Math.floor(Math.random() * FAKE_PICKS.length)];
+      injectFakePick(pick);
+    }, 2500);
+  }
+
+  // Rolling drip every 20-45 seconds
+  function drip() {
+    if (currentRoomSlug !== slug) return;
+    var user = FAKE_USERS[Math.floor(Math.random() * FAKE_USERS.length)];
+    var roomMsgs = getFakeMsgs(currentRoomSlug);
+    injectFakeMsg(user, roomMsgs[Math.floor(Math.random() * roomMsgs.length)]);
+    setTimeout(drip, 20000 + Math.random() * 25000);
+  }
+  setTimeout(drip, 20000 + Math.random() * 10000);
+}
+
+function renderFakeLeaderboard() {
+  var lb = document.getElementById('leaderboard');
+  if (!lb) return;
+  var medals = ['1st','2nd','3rd'];
+  lb.innerHTML = FAKE_LEADERBOARD.map(function(u, i) {
+    var wr = Math.round(u.wins / u.closed * 100);
+    var t = calcTier(u.closed, u.wins, wr);
+    var color = FAKE_COLORS[u.name.charCodeAt(0) % FAKE_COLORS.length];
+    var retColor = u.ret >= 0 ? 'var(--green)' : 'var(--red)';
+    var medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i+1);
+    return '<div class="leader-row">'
+      + '<div style="display:flex;align-items:center;gap:8px;">'
+      + '<div style="font-size:13px;font-weight:700;width:20px;">'+medal+'</div>'
+      + '<div class="leader-avatar" style="background:'+color+';">'+u.name[0]+'</div>'
+      + '<div style="flex:1;">'
+      + '<div style="display:flex;align-items:center;gap:4px;"><span class="leader-name">'+u.name+'</span>'
+      + '<span style="font-size:10px;padding:1px 5px;border-radius:8px;background:'+t.bg+';color:'+t.color+';">'+t.badge+' '+t.label+'</span></div>'
+      + '<div style="font-size:11px;color:var(--text3);">'+u.picks+' picks &middot; '+wr+'% win rate</div>'
+      + '</div>'
+      + '<div style="font-size:13px;font-weight:700;color:'+retColor+';font-family:'JetBrains Mono',monospace;">'+(u.ret>=0?'+':'')+u.ret.toFixed(1)+'%</div>'
+      + '</div></div>';
+  }).join('');
+}
+
+function renderFakeHotPicks() {
+  var hp = document.getElementById('hot-picks');
+  if (!hp) return;
+  hp.innerHTML = FAKE_PICKS.slice(0,5).map(function(p) {
+    var upside = (((p.target - p.entry) / p.entry) * 100).toFixed(1);
+    var votes = Math.floor(Math.random() * 40 + 5);
+    return '<div class="hot-pick">'
+      + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">'
+      + '<div><span style="font-size:14px;font-weight:700;font-family:'JetBrains Mono',monospace;">'+p.ticker+'</span>'
+      + '<span style="font-size:11px;font-weight:600;padding:2px 7px;border-radius:10px;margin-left:6px;background:var(--green-bg);color:var(--green);">LONG</span></div>'
+      + '<span style="font-size:12px;font-weight:600;color:var(--green);">+'+upside+'% target</span>'
+      + '</div>'
+      + '<div style="font-size:12px;color:var(--text3);">by '+p.user+' &middot; Upvotes: '+votes+'</div>'
+      + '</div>';
+  }).join('');
 }
 
 init();

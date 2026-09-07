@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Crypto — Cryptikr</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://s3.tradingview.com/tv.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -84,6 +85,40 @@ header{background:rgba(10,14,26,.95);backdrop-filter:blur(12px);border-bottom:1p
 .dd-card-text{font-size:13px;color:#94A3B8;line-height:1.75;}
 .dd-card-text strong{color:#F0F4FF;}
 
+/* COMMUNITY */
+.comm-card{background:#111827;border:1px solid #1E2D45;border-radius:12px;padding:20px;margin-bottom:16px;}
+.comm-title{font-size:15px;font-weight:700;color:#F0F4FF;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid #1E2D45;display:flex;align-items:center;justify-content:space-between;}
+.comm-vote-count{font-size:11px;color:#475569;}
+.sent-row{display:flex;gap:8px;margin-bottom:12px;}
+.sent-box{flex:1;text-align:center;padding:10px 4px;border-radius:8px;cursor:pointer;transition:all .15s;}
+.sent-box:hover{transform:translateY(-1px);}
+.sent-buy{background:rgba(16,185,129,.12);}
+.sent-buy:hover{background:rgba(16,185,129,.2);}
+.sent-hold{background:rgba(245,158,11,.12);}
+.sent-hold:hover{background:rgba(245,158,11,.2);}
+.sent-sell{background:rgba(239,68,68,.12);}
+.sent-sell:hover{background:rgba(239,68,68,.2);}
+.sent-pct{font-size:22px;font-weight:800;font-family:'JetBrains Mono',monospace;}
+.sent-lbl{font-size:11px;font-weight:600;margin-top:2px;}
+.sent-bar{display:flex;height:5px;border-radius:3px;overflow:hidden;margin-bottom:14px;gap:2px;}
+.sent-bar-buy{background:#10B981;transition:flex .4s;}
+.sent-bar-hold{background:#F59E0B;transition:flex .4s;}
+.sent-bar-sell{background:#EF4444;transition:flex .4s;}
+.voted-msg{font-size:12px;color:#10B981;text-align:center;margin-bottom:10px;display:none;}
+.comm-btn{width:100%;background:linear-gradient(135deg,#F59E0B,#EF4444);color:#000;border:none;border-radius:8px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:opacity .2s;}
+.comm-btn:hover{opacity:.9;}
+/* CHAT */
+.chat-wrap{margin-top:14px;padding-top:14px;border-top:1px solid #1E2D45;}
+.chat-msgs{max-height:200px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;margin-bottom:10px;}
+.chat-msg{background:#0D1424;border-radius:8px;padding:8px 12px;}
+.chat-msg-user{font-size:11px;font-weight:700;color:#F59E0B;margin-bottom:2px;}
+.chat-msg-text{font-size:13px;color:#94A3B8;line-height:1.4;}
+.chat-msg-time{font-size:10px;color:#475569;margin-top:2px;}
+.chat-input-row{display:flex;gap:6px;}
+.chat-input{flex:1;background:#0D1424;border:1px solid #1E2D45;border-radius:8px;color:#F0F4FF;font-size:13px;padding:8px 12px;font-family:inherit;outline:none;}
+.chat-input:focus{border-color:#F59E0B;}
+.chat-input::placeholder{color:#475569;}
+.chat-send{background:#F59E0B;color:#000;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;}
 /* POWERED BY */
 .powered{text-align:center;padding:24px;border-top:1px solid var(--border);margin-top:8px;font-size:11px;color:var(--text3);}
 .powered a{color:var(--text3);text-decoration:none;}
@@ -234,6 +269,8 @@ function renderCoin(c) {
   document.title = sym + ' ' + priceStr + ' — Cryptikr';
   setTimeout(function() { loadTVChart(currentCoinId, c.tvSym); }, 400);
   loadNews(currentCoinId);
+  loadSentiment(currentCoinId);
+  loadChat(currentCoinId);
   loadSummary(currentCoinId);
 }
 
@@ -371,6 +408,116 @@ function formatDD(text) {
   out = '<p>' + out + '</p>';
   out = out.replace(/<p><h2>/g, '<h2>').replace(/<\/h2><\/p>/g, '</h2>');
   return out;
+}
+
+// Supabase setup
+var SUPABASE_URL = 'https://ttcprqkoibiztibhpsrp.supabase.co';
+var SUPABASE_KEY = 'sb_publishable_iQhPAY-M-OUbFVbLQyCp5g_540rSkd1';
+var sbClient = null;
+try { sbClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY); } catch(e) {}
+
+var myVote = null;
+
+function getVoterKey() {
+  var k = localStorage.getItem('cryptikr_voter_id');
+  if (!k) { k = 'v_' + Math.random().toString(36).slice(2) + Date.now(); localStorage.setItem('cryptikr_voter_id', k); }
+  return k;
+}
+
+async function loadSentiment(coinId) {
+  if (!sbClient) return;
+  try {
+    var slug = coinId.toLowerCase();
+    var res = await sbClient.from('sentiment_votes').select('vote').eq('room_slug', slug);
+    var votes = res.data || [];
+    var buy  = votes.filter(function(v){return v.vote==='buy';}).length;
+    var hold = votes.filter(function(v){return v.vote==='hold';}).length;
+    var sell = votes.filter(function(v){return v.vote==='sell';}).length;
+    var total = buy + hold + sell;
+    var vc = document.getElementById('vote-count');
+    if (vc) vc.textContent = total + (total===1?' vote':' votes') + ' in community';
+    if (total === 0) {
+      ['buy','hold','sell'].forEach(function(v) {
+        var el = document.getElementById(v+'-pct'); if(el) el.textContent = '—';
+      });
+      return;
+    }
+    var bp = Math.round(buy/total*100), hp = Math.round(hold/total*100), sp = 100-bp-hp;
+    var buyEl  = document.getElementById('buy-pct');
+    var holdEl = document.getElementById('hold-pct');
+    var sellEl = document.getElementById('sell-pct');
+    if (buyEl)  buyEl.textContent  = bp + '%';
+    if (holdEl) holdEl.textContent = hp + '%';
+    if (sellEl) sellEl.textContent = sp + '%';
+    var bb = document.getElementById('bar-buy');
+    var bh = document.getElementById('bar-hold');
+    var bs = document.getElementById('bar-sell');
+    if (bb) bb.style.flex = bp || 0.5;
+    if (bh) bh.style.flex = hp || 0.5;
+    if (bs) bs.style.flex = sp || 0.5;
+  } catch(e) {}
+}
+
+async function castVote(vote) {
+  if (!sbClient) return;
+  var slug = currentCoinId.toLowerCase();
+  var vid  = getVoterKey();
+  try {
+    // Upsert — one vote per visitor
+    await sbClient.from('sentiment_votes').upsert(
+      { room_slug: slug, voter_id: vid, vote: vote },
+      { onConflict: 'room_slug,voter_id' }
+    );
+    myVote = vote;
+    var msg = document.getElementById('voted-msg');
+    if (msg) { msg.style.display = 'block'; setTimeout(function(){ msg.style.display='none'; }, 2000); }
+    loadSentiment(currentCoinId);
+  } catch(e) {}
+}
+
+async function loadChat(coinId) {
+  if (!sbClient) return;
+  try {
+    var res = await sbClient.from('community_messages')
+      .select('username,message,created_at')
+      .eq('room_slug', coinId.toLowerCase())
+      .order('created_at', { ascending: false })
+      .limit(20);
+    var msgs = (res.data || []).reverse();
+    var box = document.getElementById('chat-msgs');
+    if (!box) return;
+    if (!msgs.length) { box.innerHTML = '<div style="color:#475569;font-size:12px;text-align:center;padding:12px;">Be the first to comment...</div>'; return; }
+    box.innerHTML = msgs.map(function(m) {
+      var ago = m.created_at ? timeAgo(new Date(m.created_at).getTime()/1000) : '';
+      return '<div class="chat-msg">'
+        + '<div class="chat-msg-user">' + (m.username||'Anon') + '</div>'
+        + '<div class="chat-msg-text">' + m.message + '</div>'
+        + '<div class="chat-msg-time">' + ago + '</div>'
+        + '</div>';
+    }).join('');
+    box.scrollTop = box.scrollHeight;
+  } catch(e) {}
+}
+
+async function sendChat() {
+  if (!sbClient) return;
+  var input = document.getElementById('chat-input');
+  if (!input || !input.value.trim()) return;
+  var msg = input.value.trim().slice(0, 200);
+  input.value = '';
+  var username = localStorage.getItem('cryptikr_username');
+  if (!username) {
+    username = 'Trader' + Math.floor(Math.random()*9000+1000);
+    localStorage.setItem('cryptikr_username', username);
+  }
+  try {
+    await sbClient.from('community_messages').insert({
+      room_slug: currentCoinId.toLowerCase(),
+      username: username,
+      message: msg,
+    });
+    loadChat(currentCoinId);
+  } catch(e) {}
 }
 
 function goSearch() {

@@ -913,20 +913,34 @@ function startFakeActivity(slug) {
     })(i * 300);
   }
 
-  // Drop a pick in picks/general rooms after 2s
-  if (slug === 'picks' || slug === 'general') {
+  // Drop picks after burst messages
+  if (slug === 'picks') {
+    // Picks room gets 3 pick cards immediately
+    setTimeout(function() { injectFakePick(FAKE_PICKS[0]); }, 1000);
+    setTimeout(function() { injectFakePick(FAKE_PICKS[1]); }, 2000);
+    setTimeout(function() { injectFakePick(FAKE_PICKS[2]); }, 3000);
+  } else if (slug === 'general') {
+    // General gets 1 pick card
     setTimeout(function() {
-      var pick = FAKE_PICKS[Math.floor(Math.random() * FAKE_PICKS.length)];
-      injectFakePick(pick);
+      injectFakePick(FAKE_PICKS[Math.floor(Math.random() * FAKE_PICKS.length)]);
     }, 2500);
   }
 
-  // Rolling drip every 20-45 seconds
+  // Rolling drip every 20-45 seconds — mix of messages and picks
+  var dripPickEvery = 3; // inject a pick every N drips
+  var dripCount = 0;
   function drip() {
     if (currentRoomSlug !== slug) return;
-    var user = FAKE_USERS[Math.floor(Math.random() * FAKE_USERS.length)];
-    var roomMsgs = getFakeMsgs(currentRoomSlug);
-    injectFakeMsg(user, roomMsgs[Math.floor(Math.random() * roomMsgs.length)]);
+    dripCount++;
+    // Every 3rd drip in picks/general — show a pick card
+    if (dripCount % dripPickEvery === 0 && (currentRoomSlug === 'picks' || currentRoomSlug === 'general')) {
+      var pick = FAKE_PICKS[Math.floor(Math.random() * FAKE_PICKS.length)];
+      injectFakePick(pick);
+    } else {
+      var user = FAKE_USERS[Math.floor(Math.random() * FAKE_USERS.length)];
+      var roomMsgs = getFakeMsgs(currentRoomSlug);
+      injectFakeMsg(user, roomMsgs[Math.floor(Math.random() * roomMsgs.length)]);
+    }
     setTimeout(drip, 20000 + Math.random() * 25000);
   }
   setTimeout(drip, 20000 + Math.random() * 10000);

@@ -403,8 +403,8 @@ async function loadMessages(slug) {
   var area = document.getElementById('messages-area');
   area.innerHTML = '<div class="empty">Loading...</div>';
   try {
-    var res = await sb.from('messages')
-      .select('*').eq('room_id', slug).eq('deleted', false)
+    var res = await sb.from('community_messages')
+      .select('*').eq('room_slug', slug)
       .order('created_at', {ascending: true}).limit(100);
     var msgs = res.data || [];
     area.innerHTML = '';
@@ -418,14 +418,14 @@ function appendMessage(msg, scroll) {
   var area = document.getElementById('messages-area');
   var empty = area.querySelector('.empty');
   if (empty) empty.remove();
-  var isPick = msg.content && msg.content.startsWith('__PICK__');
+  var msgText = msg.content || msg.message || ''; var isPick = msgText.startsWith('__PICK__');
   var div = document.createElement('div');
   div.className = 'msg';
   var color = COLORS[(msg.username||'a').charCodeAt(0) % COLORS.length];
   var timeStr = msg.created_at ? timeAgo(msg.created_at) : '';
   if (isPick) {
     try {
-      var pick = JSON.parse(msg.content.slice(8));
+      var pick = JSON.parse(msgText.slice(8));
       var isBuy = pick.direction === 'BUY';
       var upside = pick.target_price && pick.entry_price ? (((pick.target_price - pick.entry_price)/pick.entry_price)*100).toFixed(1) : null;
       div.innerHTML = '<div class="msg-avatar" style="background:'+color+';">'+((msg.username||'?')[0].toUpperCase())+'</div>'
@@ -448,7 +448,7 @@ function appendMessage(msg, scroll) {
     div.innerHTML = '<div class="msg-avatar" style="background:'+color+';">'+((msg.username||'?')[0].toUpperCase())+'</div>'
       + '<div class="msg-body">'
       + '<div class="msg-header"><span class="msg-user" onclick="showTraderProfile(\''+escHtml(msg.username||'')+'\')">'+(msg.username||'Anon')+'</span>'+getTierBadge(msg.username||'')+'<span class="msg-time">'+timeStr+'</span></div>'
-      + '<div class="msg-text">'+escHtml(msg.content||'')+'</div>'
+      + '<div class="msg-text">'+escHtml(msgText)+'</div>'
       + '</div>';
   }
   area.appendChild(div);
@@ -457,9 +457,11 @@ function appendMessage(msg, scroll) {
 
 function subscribeToRoom(slug) {
   if (realtimeChannel) sb.removeChannel(realtimeChannel);
-  realtimeChannel = sb.channel('room:'+slug)
-    .on('postgres_changes', {event:'INSERT', schema:'public', table:'messages', filter:'room_id=eq.'+slug}, function(payload) {
-      appendMessage(payload.new, true);
+  realtimeChannel = sb.channel('cryptikr:'+slug)
+    .on('postgres_changes', {event:'INSERT', schema:'public', table:'community_messages', filter:'room_slug=eq.'+slug}, function(payload) {
+      var msg = payload.new;
+      // Map community_messages fields to message format
+      appendMessage({username: msg.username, content: msg.message, created_at: msg.created_at}, true);
     }).subscribe();
 }
 
@@ -471,12 +473,10 @@ async function sendMessage() {
   if (!content) return;
   input.value = '';
   try {
-    await sb.from('messages').insert({
-      user_id: currentUser.id,
+    await sb.from('community_messages').insert({
       username: currentProfile.username,
-      content: content,
-      room_id: currentRoomSlug,
-      deleted: false,
+      message: content,
+      room_slug: currentRoomSlug,
     });
   } catch(e) { alert('Could not send: ' + e.message); }
 }
@@ -519,12 +519,10 @@ async function postPick() {
     if (pickRes.error) { alert('Error: ' + pickRes.error.message); return; }
 
     // Post as message
-    await sb.from('messages').insert({
-      user_id: currentUser.id,
+    await sb.from('community_messages').insert({
       username: currentProfile.username,
-      content: '__PICK__' + JSON.stringify({...pick, timeframe: tf}),
-      room_id: currentRoomSlug,
-      deleted: false,
+      message: '__PICK__' + JSON.stringify(Object.assign({}, pick, {timeframe: tf})),
+      room_slug: currentRoomSlug,
     });
 
     // Auto-vote sentiment

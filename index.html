@@ -449,7 +449,14 @@ function renderMarketGrid(coins) {
 function switchMarketTab(tab, btn) {
   document.querySelectorAll('.mkt-tab').forEach(function(b){b.classList.remove('active');});
   if (btn) btn.classList.add('active');
-  if (tab === 'all') { renderMarketGrid(allCoinsCache.slice(0,12)); return; }
+  if (tab === 'all') {
+    if (allCoinsCache.length) { renderMarketGrid(allCoinsCache.slice(0,12)); return; }
+    // Cache empty — re-fetch
+    var grid = document.getElementById('market-grid');
+    grid.innerHTML = '<div class="loading-card"></div><div class="loading-card"></div><div class="loading-card"></div><div class="loading-card"></div>';
+    fetch('/api/market').then(function(r){return r.json();}).then(function(coins){allCoinsCache=coins;renderMarketGrid(coins);}).catch(function(){});
+    return;
+  }
   // Fetch from movers API for gainers/losers/trending
   var grid = document.getElementById('market-grid');
   grid.innerHTML = '<div class="loading-card"></div><div class="loading-card"></div><div class="loading-card"></div><div class="loading-card"></div>';

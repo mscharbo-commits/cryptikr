@@ -623,7 +623,7 @@ async function loadLeaderboard() {
         + '<div class="leader-avatar" style="background:'+color+';">'+u.name[0].toUpperCase()+'</div>'
         + '<div style="flex:1;"><div style="display:flex;align-items:center;gap:4px;"><span class="leader-name">'+escHtml(u.name)+'</span>'+(t.badge?'<span style="font-size:10px;padding:1px 5px;border-radius:8px;background:'+t.bg+';color:'+t.color+';">'+t.badge+' '+t.label+'</span>':'')+'</div>'
         + '<div style="font-size:11px;color:var(--text3);">'+u.picks+' picks · '+u.closedPicks+' closed</div></div>'
-        + '<div style="font-size:13px;font-weight:700;color:'+retColor+';font-family:\'JetBrains Mono\',monospace;">'+(u.closedPicks>0?(u.totalReturn>=0?'+':'')+u.totalReturn.toFixed(1)+'%':'Tracking')+'</div>'
+        + '<div style="font-size:13px;font-weight:700;color:'+retColor+';font-family:monospace;">'+(u.closedPicks>0?(u.totalReturn>=0?'+':'')+u.totalReturn.toFixed(1)+'%':'Tracking')+'</div>'
         + '</div>'
         + '<div style="display:flex;gap:8px;padding-left:48px;font-size:11px;color:var(--text3);">'
         + '<span>Win rate: <strong style="color:var(--text);">'+u.wr+'%</strong></span>'
@@ -645,7 +645,7 @@ async function loadHotPicks() {
       var upside = entry && p.target_price ? (((p.target_price-entry)/entry)*100).toFixed(1) : null;
       return '<div class="hot-pick" onclick="showTraderProfile(\''+escHtml(p.username||'')+'\')">'
         + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">'
-        + '<div><span style="font-size:14px;font-weight:700;font-family:\'JetBrains Mono\',monospace;">'+(p.ticker||'').toUpperCase()+'</span>'
+        + '<div><span style="font-size:14px;font-weight:700;font-family:monospace;">'+(p.ticker||'').toUpperCase()+'</span>'
         + '<span style="font-size:11px;font-weight:600;padding:2px 7px;border-radius:10px;margin-left:6px;'+(isBuy?'background:var(--green-bg);color:var(--green)':'background:var(--red-bg);color:var(--red)')+';">'+(isBuy?'LONG':'SHORT')+'</span></div>'
         + (upside ? '<span style="font-size:12px;font-weight:600;color:var(--green);">+'+upside+'% target</span>' : '')
         + '</div>'
@@ -676,7 +676,7 @@ async function showTraderProfile(username) {
       + '<div style="width:48px;height:48px;border-radius:12px;background:'+color+';display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:#fff;">'+username[0].toUpperCase()+'</div>'
       + '<div><div style="font-size:18px;font-weight:800;">'+escHtml(username)+'<span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;background:'+t.bg+';color:'+t.color+';margin-left:8px;">'+t.badge+' '+t.label+'</span></div>'
       + '<div style="font-size:12px;color:var(--text3);">'+picks.length+' picks · '+closed.length+' closed · '+wr+'% win rate</div></div>'
-      + '<div style="margin-left:auto;font-size:18px;font-weight:800;color:'+(totalRet>=0?'var(--green)':'var(--red)')+';font-family:\'JetBrains Mono\',monospace;">'+(closed.length>0?(totalRet>=0?'+':'')+totalRet.toFixed(1)+'%':'Tracking')+'</div></div>'
+      + '<div style="margin-left:auto;font-size:18px;font-weight:800;color:'+(totalRet>=0?'var(--green)':'var(--red)')+';font-family:monospace;">'+(closed.length>0?(totalRet>=0?'+':'')+totalRet.toFixed(1)+'%':'Tracking')+'</div></div>'
       + '<div style="display:flex;gap:12px;margin-bottom:18px;">'
       + '<div style="flex:1;background:var(--surface2);border-radius:8px;padding:10px;text-align:center;"><div style="font-size:18px;font-weight:800;">'+wins.length+'</div><div style="font-size:11px;color:var(--text3);">Wins</div></div>'
       + '<div style="flex:1;background:var(--surface2);border-radius:8px;padding:10px;text-align:center;"><div style="font-size:18px;font-weight:800;">'+(closed.length-wins.length)+'</div><div style="font-size:11px;color:var(--text3);">Losses</div></div>'
@@ -687,7 +687,7 @@ async function showTraderProfile(username) {
           var isBuy = p.direction==='BUY';
           var isWin = p.result==='win', isLoss = p.result==='loss'||p.result==='closed';
           return '<div style="background:var(--surface2);border-radius:8px;padding:10px 12px;margin-bottom:6px;display:flex;align-items:center;gap:10px;">'
-            + '<span style="font-size:13px;font-weight:700;font-family:\'JetBrains Mono\',monospace;">'+(p.ticker||'').toUpperCase()+'</span>'
+            + '<span style="font-size:13px;font-weight:700;font-family:monospace;">'+(p.ticker||'').toUpperCase()+'</span>'
             + '<span style="font-size:11px;padding:2px 7px;border-radius:6px;'+(isBuy?'background:var(--green-bg);color:var(--green)':'background:var(--red-bg);color:var(--red)')+';">'+(isBuy?'LONG':'SHORT')+'</span>'
             + '<span style="font-size:11px;color:var(--text3);margin-left:auto;">Entry: $'+(parseFloat(p.actual_entry_price||p.entry_price||0).toLocaleString())+'</span>'
             + (p.result ? '<span style="font-size:12px;font-weight:700;color:'+(isWin?'var(--green)':'var(--red)')+';">'+(isWin?'✅':'❌')+(p.return_pct?' '+(parseFloat(p.return_pct)>=0?'+':'')+parseFloat(p.return_pct).toFixed(1)+'%':'')+'</span>' : '<span style="font-size:11px;color:var(--text3);">Open</span>')
@@ -973,7 +973,7 @@ function renderFakeLeaderboard() {
       + '<span style="font-size:10px;padding:1px 5px;border-radius:8px;background:'+t.bg+';color:'+t.color+';">'+t.badge+' '+t.label+'</span></div>'
       + '<div style="font-size:11px;color:var(--text3);">'+u.picks+' picks &middot; '+wr+'% win rate</div>'
       + '</div>'
-      + '<div style="font-size:13px;font-weight:700;color:'+retColor+';font-family:'JetBrains Mono',monospace;">'+(u.ret>=0?'+':'')+u.ret.toFixed(1)+'%</div>'
+      + '<div style="font-size:13px;font-weight:700;color:'+retColor+';font-family:monospace;">'+(u.ret>=0?'+':'')+u.ret.toFixed(1)+'%</div>'
       + '</div></div>';
   }).join('');
 }
@@ -986,7 +986,7 @@ function renderFakeHotPicks() {
     var votes = Math.floor(Math.random() * 40 + 5);
     return '<div class="hot-pick">'
       + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">'
-      + '<div><span style="font-size:14px;font-weight:700;font-family:'JetBrains Mono',monospace;">'+p.ticker+'</span>'
+      + '<div><span style="font-size:14px;font-weight:700;font-family:monospace;">'+p.ticker+'</span>'
       + '<span style="font-size:11px;font-weight:600;padding:2px 7px;border-radius:10px;margin-left:6px;background:var(--green-bg);color:var(--green);">LONG</span></div>'
       + '<span style="font-size:12px;font-weight:600;color:var(--green);">+'+upside+'% target</span>'
       + '</div>'

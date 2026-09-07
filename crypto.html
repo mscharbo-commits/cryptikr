@@ -242,7 +242,7 @@ function renderCoin(c) {
     + '<span class="coin-price">'+priceStr+'</span>'
     + '<span class="coin-chg '+cls+'">'+fmtPct(chg24)+' (24h)</span>'
     + '</div>'
-    + '<div class="coin-updated">Real-time · CoinGecko · Powered by PulseStock</div>'
+    + '<div class="coin-updated">Real-time · CoinGecko · Powered by Cryptikr</div>'
     + '</div></div>'
 
     + '<div class="grid"><div>'
@@ -336,30 +336,27 @@ function renderCoin(c) {
   loadSummary(currentCoinId);
 }
 
+function showChartFallback(el, coinId) {
+  el.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:300px;gap:14px;background:#0D1424;border-radius:10px;">'
+    + '<div style="font-size:36px;">📊</div>'
+    + '<div style="font-size:15px;font-weight:700;color:#F0F4FF;">Chart not on TradingView yet</div>'
+    + '<div style="font-size:13px;color:#64748B;text-align:center;max-width:280px;line-height:1.5;">This token trades on DEXs and smaller exchanges not yet indexed by TradingView. Full price history available on CoinGecko.</div>'
+    + '<a href="https://www.coingecko.com/en/coins/'+coinId+'" target="_blank" style="padding:10px 22px;background:linear-gradient(135deg,#F59E0B,#EF4444);color:#000;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;">View Chart on CoinGecko →</a>'
+    + '</div>';
+}
+
 function loadTVChart(coinId, tvSymOverride) {
   var el = document.getElementById('tv-container');
   if (!el) return;
 
-  // If coin is not in our map and has no override, show fallback immediately
-  var isKnown = tvSymOverride || TV_SYMS[coinId];
-  if (!isKnown) {
-    // Small/new coins — show CoinGecko chart link instead
-    el.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:300px;gap:14px;background:#0D1424;border-radius:10px;">'
-      + '<div style="font-size:32px;">📊</div>'
-      + '<div style="font-size:15px;font-weight:700;color:#F0F4FF;">Chart not available</div>'
-      + '<div style="font-size:13px;color:#475569;text-align:center;max-width:260px;">This token is too new or small for TradingView. View on CoinGecko for price history.</div>'
-      + '<a href="https://www.coingecko.com/en/coins/'+coinId+'" target="_blank" style="padding:10px 20px;background:linear-gradient(135deg,#F59E0B,#EF4444);color:#000;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;">View on CoinGecko →</a>'
-      + '</div>';
+  // Only show TradingView for coins explicitly in our map or with an override
+  // For everything else show the CoinGecko fallback — avoids "symbol doesn't exist" TV error
+  if (!tvSymOverride && !TV_SYMS[coinId]) {
+    showChartFallback(el, coinId);
     return;
   }
 
-  var sym = tvSymOverride || TV_SYMS[coinId] || (function() {
-    var clean = coinId.replace(/-\d+$/, '').replace(/-/g, '').toUpperCase();
-    var overrides = {'TRON':'TRX','STELLAR':'XLM','NEARPROTOCOL':'NEAR','SHIBAINU':'SHIB',
-      'THEOPENNETWORK':'TON','BITCOINCASH':'BCH','DOGECOIN':'DOGE','CARDANO':'ADA'};
-    if (overrides[clean]) clean = overrides[clean];
-    return 'BINANCE:' + clean + 'USDT';
-  }());
+  var sym = tvSymOverride || TV_SYMS[coinId];
 
   var iframe = document.createElement('iframe');
   iframe.style.cssText = 'width:100%;height:520px;border:none;';
@@ -370,14 +367,24 @@ function loadTVChart(coinId, tvSymOverride) {
     +'&studies=RSI%40tv-basicstudies%1FMACD%40tv-basicstudies'
     +'&showpopupbutton=1';
 
-  // On error replace with fallback
-  iframe.onerror = function() {
-    el.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:300px;gap:14px;background:#0D1424;border-radius:10px;">'
-      + '<div style="font-size:32px;">📊</div>'
-      + '<div style="font-size:15px;font-weight:700;color:#F0F4FF;">Chart unavailable</div>'
-      + '<a href="https://www.coingecko.com/en/coins/'+coinId+'" target="_blank" style="padding:10px 20px;background:linear-gradient(135deg,#F59E0B,#EF4444);color:#000;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;">View on CoinGecko →</a>'
-      + '</div>';
-  };
+  // Listen for TV error message via postMessage
+  var handled = false;
+  function onMsg(e) {
+    if (handled) return;
+    try {
+      var data = typeof e.data === 'string' ? JSON.parse(e.data) : e.data;
+      if (data && (data.name === 'tv-widget-no-data' || (data.type && data.type.includes('error')))) {
+        handled = true;
+        window.removeEventListener('message', onMsg);
+        showChartFallback(el, coinId);
+      }
+    } catch(err) {}
+  }
+  window.addEventListener('message', onMsg);
+  // Fallback timeout — if TV loads and shows "symbol doesn't exist" we can't catch it
+  // but at least clean up the listener
+  setTimeout(function() { window.removeEventListener('message', onMsg); }, 10000);
+
   el.innerHTML = '';
   el.appendChild(iframe);
 }
@@ -629,7 +636,7 @@ else loadCoin(currentCoinId);
 </script>
 
 <div class="powered">
-  Powered by <a href="https://pulsestock-nu.vercel.app" target="_blank">PulseStock</a> · Data via CoinGecko · Not financial advice
+  Powered by <a href="https://pulsestock-nu.vercel.app" target="_blank">Cryptikr</a> · Data via CoinGecko · Not financial advice
 </div>
 </body>
 </html>

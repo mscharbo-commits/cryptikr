@@ -401,21 +401,8 @@ async function switchRoom(slug, name, desc, roomId) {
 // ── MESSAGES ──
 async function loadMessages(slug) {
   var area = document.getElementById('messages-area');
-  area.innerHTML = '<div class="empty">Loading...</div>';
-  if (!currentRoom) { area.innerHTML = '<div class="empty">Select a room to start chatting.</div>'; return; }
-  try {
-    var res = await sb.from('messages')
-      .select('*').eq('room_id', currentRoom).eq('deleted', false)
-      .order('created_at', {ascending: true}).limit(100);
-    var msgs = res.data || [];
-    area.innerHTML = '';
-    if (!msgs.length) { area.innerHTML = '<div class="empty">No messages yet. Be the first! 👋</div>'; return; }
-    msgs.forEach(function(m) { appendMessage(m, false); });
-    area.scrollTop = area.scrollHeight;
-  } catch(e) {
-    console.error('loadMessages error:', e);
-    area.innerHTML = '<div class="empty">No messages yet. Be the first! 👋</div>';
-  }
+  area.innerHTML = '';
+  // Fake engine handles message display — no shared DB with PulseStock
 }
 
 function appendMessage(msg, scroll) {
@@ -460,11 +447,7 @@ function appendMessage(msg, scroll) {
 }
 
 function subscribeToRoom(slug) {
-  if (realtimeChannel) sb.removeChannel(realtimeChannel);
-  realtimeChannel = sb.channel('room:'+currentRoom)
-    .on('postgres_changes', {event:'INSERT', schema:'public', table:'messages', filter:'room_id=eq.'+currentRoom}, function(payload) {
-      appendMessage(payload.new, true);
-    }).subscribe();
+  // Realtime disabled — using fake engine for community activity
 }
 
 // ── SEND MESSAGE ──
@@ -475,13 +458,8 @@ async function sendMessage() {
   if (!content) return;
   input.value = '';
   try {
-    await sb.from('messages').insert({
-      user_id: currentUser.id,
-      username: currentProfile.username,
-      content: content,
-      room_id: currentRoom,
-      deleted: false,
-    });
+    // Inject message locally
+    injectFakeMsg(currentProfile.username, content);
   } catch(e) { alert('Could not send: ' + e.message); }
 }
 

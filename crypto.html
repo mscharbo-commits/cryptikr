@@ -312,7 +312,10 @@ function renderCoin(c) {
 function loadTVChart(coinId, tvSymOverride) {
   var el = document.getElementById('tv-container');
   if (!el) return;
-  var sym = tvSymOverride || TV_SYMS[coinId] || ('BINANCE:'+coinId.toUpperCase().replace(/-/g,'')+'USDT');
+  var sym = tvSymOverride || TV_SYMS[coinId] || (function() {
+    var clean = coinId.replace(/-\d+$/, '').replace(/-/g, '').toUpperCase();
+    return 'BINANCE:' + clean + 'USDT';
+  }());
   var src = 'https://s.tradingview.com/widgetembed/?symbol='+encodeURIComponent(sym)
     +'&interval=D&theme=dark&style=1&locale=en&toolbar_bg=111827'
     +'&withdateranges=1&allow_symbol_change=1'

@@ -739,8 +739,17 @@ function switchTab(tab, btn) {
 
 // ── INIT ──
 async function init() {
-  // Check auth
-  var {data:{user}} = await sb.auth.getUser();
+  // Check auth — don't block on failure
+  var user = null;
+  try {
+    var authRes = await Promise.race([
+      sb.auth.getUser(),
+      new Promise(function(_, rej){ setTimeout(function(){ rej(new Error('timeout')); }, 3000); })
+    ]);
+    user = authRes.data && authRes.data.user;
+  } catch(e) { user = null; }
+  // Reassign so rest of function works
+  if (false) { var {data:{user}} = {data:{user:null}}; }
   if (user) {
     currentUser = user;
     var meta = user.user_metadata || {};
@@ -753,21 +762,20 @@ async function init() {
     document.getElementById('pick-login-prompt').style.display = 'block';
   }
 
-  // Load rooms from Supabase (coin-specific rooms)
-  try {
-    var roomsRes = await sb.from('rooms').select('*').eq('status','active').order('name');
-    allRoomsData = roomsRes.data || [];
-  } catch(e) { allRoomsData = []; }
-  renderRoomList(allRoomsData);
+  // Render rooms immediately — no DB needed for default rooms
+  renderRoomList([]);
 
-  // Load default room
+  // Load default room from URL or fallback to general
   var urlRoom = new URLSearchParams(window.location.search).get('room') || 'general';
   var defaultRoom = DEFAULT_ROOMS.find(function(r){return r.slug===urlRoom;}) || DEFAULT_ROOMS[0];
-  await switchRoom(defaultRoom.slug, defaultRoom.name, defaultRoom.description, defaultRoom.id);
-  await loadLeaderboard();
-  await loadHotPicks();
+  
+  // Switch room (don't await — let it load async)
+  switchRoom(defaultRoom.slug, defaultRoom.name, defaultRoom.description, defaultRoom.id);
+  
+  // Load sidebar async — don't block
+  setTimeout(function() { loadLeaderboard(); }, 500);
+  setTimeout(function() { loadHotPicks(); }, 800);
 
-  // Listen for auth changes
   sb.auth.onAuthStateChange(function(event, session) {
     if (event === 'SIGNED_IN') location.reload();
   });

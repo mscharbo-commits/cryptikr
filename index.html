@@ -406,20 +406,19 @@ var trendingCache = [];
 
 async function loadTrending() {
   try {
-    var r = await fetch('https://api.coingecko.com/api/v3/search/trending', {headers:{'x-cg-demo-api-key':'CG-pwDvU5d2bQqDKVha9KGCkaCf'}});
+    var r = await fetch('/api/movers?type=trending');
     if (!r.ok) return;
-    var data = await r.json();
-    var coins = (data.coins||[]).slice(0,10).map(function(c){return c.item;});
+    var coins = await r.json();
     trendingCache = coins;
     var strip = document.getElementById('trending-strip');
     if (!strip) return;
     strip.innerHTML = coins.map(function(c,i) {
-      var pct = c.data && c.data.price_change_percentage_24h && c.data.price_change_percentage_24h.usd || 0;
+      var pct = c.price_change_percentage_24h || 0;
       var pctStr = (pct>=0?'+':'')+pct.toFixed(2)+'%';
       var pctColor = pct>=0?'#10B981':'#EF4444';
       return '<a class="trend-chip" href="/crypto/'+c.id+'">'
         +'<span class="trend-rank">#'+(i+1)+'</span>'
-        +(c.small?'<img class="trend-logo" src="'+c.small+'" />'  :'')
+        +(c.image?'<img class="trend-logo" src="'+c.image+'" />':'')
         +'<span class="trend-sym">'+(c.symbol||'').toUpperCase()+'</span>'
         +'<span class="trend-pct" style="color:'+pctColor+';">'+pctStr+'</span>'
         +'</a>';
@@ -450,25 +449,14 @@ function renderMarketGrid(coins) {
 function switchMarketTab(tab, btn) {
   document.querySelectorAll('.mkt-tab').forEach(function(b){b.classList.remove('active');});
   if (btn) btn.classList.add('active');
-  if (tab==='trending') {
-    var grid = document.getElementById('market-grid');
-    if (grid) grid.innerHTML = trendingCache.map(function(c) {
-      var pct = c.data&&c.data.price_change_percentage_24h&&c.data.price_change_percentage_24h.usd||0;
-      var cls = pct>=0?'up':'dn';
-      return '<a class="market-card" href="/crypto/'+c.id+'">'
-        +(c.small?'<img class="mc-logo" src="'+c.small+'" />':'')
-        +'<div class="mc-info"><div class="mc-name">'+(c.name||'')+'</div>'
-        +'<div class="mc-sym">'+(c.symbol||'').toUpperCase()+'</div></div>'
-        +'<div class="mc-price-wrap"><div class="mc-price">'+(c.data&&c.data.price||'—')+'</div>'
-        +'<div class="mc-change '+cls+'">'+(pct>=0?'+':'')+pct.toFixed(2)+'%</div></div></a>';
-    }).join('');
-    return;
-  }
-  var coins = allCoinsCache.slice();
-  if (tab==='gainers') coins=coins.filter(function(c){return c.price_change_percentage_24h>0;}).sort(function(a,b){return b.price_change_percentage_24h-a.price_change_percentage_24h;}).slice(0,12);
-  else if (tab==='losers') coins=coins.filter(function(c){return c.price_change_percentage_24h<0;}).sort(function(a,b){return a.price_change_percentage_24h-b.price_change_percentage_24h;}).slice(0,12);
-  else coins=coins.slice(0,12);
-  renderMarketGrid(coins);
+  if (tab === 'all') { renderMarketGrid(allCoinsCache.slice(0,12)); return; }
+  // Fetch from movers API for gainers/losers/trending
+  var grid = document.getElementById('market-grid');
+  grid.innerHTML = '<div class="loading-card"></div><div class="loading-card"></div><div class="loading-card"></div><div class="loading-card"></div>';
+  fetch('/api/movers?type='+tab)
+    .then(function(r){ return r.json(); })
+    .then(function(coins) { renderMarketGrid(coins); })
+    .catch(function() { grid.innerHTML = '<div style="color:var(--text3);padding:20px;font-size:13px;">Could not load data.</div>'; });
 }
 
 async function loadMarket() {

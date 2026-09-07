@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Cryptikr Community — Crypto Picks & Chat</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#0A0E1A;--surface:#111827;--surface2:#1A2236;--border:#1E2D45;
+  --text:#F0F4FF;--text2:#94A3B8;--text3:#475569;
+  --accent:#F59E0B;--green:#10B981;--green-bg:rgba(16,185,129,.12);
+  --red:#EF4444;--red-bg:rgba(239,68,68,.12);
+  --amber:#F59E0B;--amber-bg:rgba(245,158,11,.12);
+  --radius:12px;
+}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;height:100vh;display:flex;flex-direction:column;}
+
+/* NAV */
+header{background:rgba(10,14,26,.95);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);height:56px;display:flex;align-items:center;padding:0 24px;gap:24px;flex-shrink:0;}
+.logo{display:flex;align-items:center;gap:10px;text-decoration:none;}
+.logo-icon{width:30px;height:30px;background:linear-gradient(135deg,#F59E0B,#EF4444);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;}
+.logo-name{font-size:16px;font-weight:800;color:#fff;letter-spacing:-.4px;}
+.logo-name span{color:var(--accent);}
+.nav-links{display:flex;gap:4px;flex:1;}
+.nav-link{font-size:13px;font-weight:500;color:var(--text2);text-decoration:none;padding:6px 12px;border-radius:7px;transition:all .15s;}
+.nav-link:hover,.nav-link.active{background:var(--surface2);color:var(--text);}
+.header-auth{display:flex;gap:8px;align-items:center;}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--text2);border-radius:7px;padding:6px 14px;font-size:13px;cursor:pointer;font-family:inherit;}
+.btn-ghost:hover{border-color:var(--accent);color:var(--accent);}
+.btn-primary{background:linear-gradient(135deg,#F59E0B,#EF4444);color:#000;border:none;border-radius:7px;padding:6px 14px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;}
+
+/* LAYOUT */
+.community-layout{display:grid;grid-template-columns:220px 1fr 280px;flex:1;overflow:hidden;gap:0;}
+
+/* ROOMS SIDEBAR */
+.rooms-sidebar{border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
+.rooms-header{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);padding:14px 16px 8px;}
+.room-search{margin:0 10px 8px;padding:7px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;outline:none;font-family:inherit;}
+.room-search::placeholder{color:var(--text3);}
+.rooms-list{flex:1;overflow-y:auto;}
+.room-item{display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;transition:background .15s;border-radius:0;}
+.room-item:hover{background:var(--surface2);}
+.room-item.active{background:rgba(245,158,11,.1);border-left:3px solid var(--accent);}
+.room-icon{font-size:16px;width:28px;text-align:center;}
+.room-name{font-size:13px;font-weight:600;color:var(--text);}
+.create-room-btn{margin:10px;padding:9px;background:transparent;border:1px dashed var(--border);border-radius:8px;color:var(--text3);font-size:13px;cursor:pointer;font-family:inherit;transition:all .15s;}
+.create-room-btn:hover{border-color:var(--accent);color:var(--accent);}
+
+/* CHAT MAIN */
+.chat-container{display:flex;flex-direction:column;overflow:hidden;}
+.chat-header{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.chat-room-title{font-size:16px;font-weight:700;}
+.chat-room-desc{font-size:12px;color:var(--text3);margin-top:2px;}
+.online-badge{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--green);}
+.online-dot{width:7px;height:7px;background:var(--green);border-radius:50%;animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
+.messages-area{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px;}
+.msg{display:flex;gap:10px;}
+.msg-avatar{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0;}
+.msg-body{flex:1;}
+.msg-header{display:flex;align-items:center;gap:8px;margin-bottom:3px;}
+.msg-user{font-size:13px;font-weight:700;color:var(--accent);cursor:pointer;}
+.msg-user:hover{text-decoration:underline;}
+.msg-time{font-size:11px;color:var(--text3);}
+.msg-text{font-size:13px;color:var(--text2);line-height:1.5;}
+.pick-card{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px;margin-top:4px;}
+.pick-dir{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;margin-bottom:6px;}
+.pick-dir.buy{background:var(--green-bg);color:var(--green);}
+.pick-dir.sell{background:var(--red-bg);color:var(--red);}
+.pick-prices{display:flex;gap:12px;font-size:12px;color:var(--text3);flex-wrap:wrap;}
+.pick-prices span strong{color:var(--text);}
+.pick-perf{font-size:13px;font-weight:700;margin-top:6px;}
+.empty{color:var(--text3);font-size:13px;text-align:center;padding:40px 20px;}
+
+/* SENTIMENT BAR */
+.sentiment-bar{padding:12px 20px;border-top:1px solid var(--border);flex-shrink:0;background:var(--surface);}
+.sentiment-title{display:flex;justify-content:space-between;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px;}
+.sentiment-btns{display:flex;gap:6px;margin-bottom:8px;}
+.sent-btn{flex:1;padding:7px;border:1px solid var(--border);border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s;background:transparent;color:var(--text2);}
+.sent-btn:hover,.sent-btn.active{border-color:transparent;}
+.sent-btn.sent-buy:hover,.sent-btn.sent-buy.active{background:var(--green-bg);color:var(--green);border-color:var(--green);}
+.sent-btn.sent-hold:hover,.sent-btn.sent-hold.active{background:var(--amber-bg);color:var(--amber);border-color:var(--amber);}
+.sent-btn.sent-sell:hover,.sent-btn.sent-sell.active{background:var(--red-bg);color:var(--red);border-color:var(--red);}
+.sentiment-track{display:flex;height:4px;border-radius:2px;overflow:hidden;margin-bottom:6px;gap:2px;}
+.sentiment-labels{display:flex;font-size:11px;font-weight:600;}
+.sentiment-labels span{flex:1;text-align:center;}
+
+/* INPUT */
+.chat-input-area{padding:12px 16px;border-top:1px solid var(--border);flex-shrink:0;}
+.input-tabs{display:flex;gap:4px;margin-bottom:8px;}
+.input-tab{padding:5px 12px;background:transparent;border:1px solid var(--border);border-radius:6px;font-size:12px;font-weight:600;color:var(--text3);cursor:pointer;font-family:inherit;transition:all .15s;}
+.input-tab.active{background:var(--accent);color:#000;border-color:var(--accent);}
+.msg-input-row{display:flex;gap:6px;}
+.msg-input{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;padding:8px 12px;outline:none;font-family:inherit;}
+.msg-input:focus{border-color:var(--accent);}
+.msg-input::placeholder{color:var(--text3);}
+.send-btn{background:var(--accent);color:#000;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;}
+.login-prompt{font-size:13px;color:var(--text3);padding:8px 0;}
+.login-prompt button{background:none;border:none;color:var(--accent);cursor:pointer;font-weight:600;font-family:inherit;padding:0;}
+
+/* PICK FORM */
+.pick-form{background:var(--surface2);border-radius:10px;padding:12px;}
+.pick-form-row{display:flex;gap:8px;margin-bottom:8px;}
+.pf-group{flex:1;display:flex;flex-direction:column;gap:4px;}
+.pf-group label{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;}
+.pf-group input,.pf-group select,.pf-group textarea{background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;padding:6px 8px;outline:none;font-family:inherit;}
+.pf-group input:focus,.pf-group select:focus{border-color:var(--accent);}
+.pf-group select option{background:var(--surface);}
+.pick-submit-btn{width:100%;background:linear-gradient(135deg,#F59E0B,#EF4444);color:#000;border:none;border-radius:8px;padding:9px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:6px;}
+
+/* RIGHT SIDEBAR */
+.right-sidebar{border-left:1px solid var(--border);overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:16px;}
+.sidebar-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;}
+.sidebar-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border);}
+.leader-row{display:flex;flex-direction:column;gap:4px;padding:10px;border-radius:8px;cursor:pointer;transition:background .15s;margin-bottom:4px;}
+.leader-row:hover{background:var(--surface2);}
+.leader-avatar{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0;}
+.leader-name{font-size:13px;font-weight:700;color:var(--accent);}
+.hot-pick{padding:10px;background:var(--surface2);border-radius:8px;margin-bottom:6px;cursor:pointer;transition:background .15s;}
+.hot-pick:hover{background:var(--surface);}
+.scoring-row{display:flex;align-items:flex-start;gap:8px;font-size:12px;color:var(--text2);margin-bottom:4px;line-height:1.4;}
+
+/* MODALS */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:1000;padding:20px;}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px;width:100%;max-width:420px;}
+.modal h2{font-size:18px;font-weight:800;margin-bottom:6px;}
+.modal p{font-size:13px;color:var(--text2);margin-bottom:18px;}
+.form-group{margin-bottom:14px;}
+.form-group label{display:block;font-size:12px;font-weight:600;color:var(--text3);margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em;}
+.form-group input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;padding:9px 12px;outline:none;font-family:inherit;}
+.form-group input:focus{border-color:var(--accent);}
+.modal-actions{display:flex;gap:8px;margin-top:18px;}
+.modal-actions .btn-primary{flex:1;padding:10px;}
+.error-msg{background:var(--red-bg);border:1px solid var(--red);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--red);margin-bottom:12px;}
+.success-msg{background:var(--green-bg);border:1px solid var(--green);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--green);margin-bottom:12px;}
+</style>
+</head>
+<body>
+
+<header>
+  <a href="/" class="logo">
+    <div class="logo-icon">₿</div>
+    <div class="logo-name">Crypti<span>kr</span></div>
+  </a>
+  <nav class="nav-links">
+    <a href="/" class="nav-link">📊 Markets</a>
+    <a href="/community.html" class="nav-link active">💬 Community</a>
+  </nav>
+  <div class="header-auth" id="header-auth">
+    <button class="btn-ghost" onclick="showAuth('login')">Log in</button>
+    <button class="btn-primary" onclick="showAuth('signup')">Sign up</button>
+  </div>
+</header>
+
+<!-- TRADER PROFILE MODAL -->
+<div class="modal-overlay" id="trader-modal" style="display:none;" onclick="if(event.target===this)this.style.display='none'">
+  <div class="modal" style="max-width:600px;width:95%;max-height:85vh;overflow-y:auto;">
+    <div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
+      <button onclick="document.getElementById('trader-modal').style.display='none'" style="background:none;border:none;color:var(--text3);font-size:22px;cursor:pointer;">✕</button>
+    </div>
+    <div id="trader-modal-content"></div>
+  </div>
+</div>
+
+<!-- AUTH MODAL -->
+<div class="modal-overlay" id="auth-modal" style="display:none;">
+  <div class="modal">
+    <h2 id="auth-title">Create account</h2>
+    <p id="auth-subtitle">Join Cryptikr to share picks and track your record.</p>
+    <div id="auth-error" class="error-msg" style="display:none;"></div>
+    <div id="signup-fields">
+      <div class="form-group"><label>Username</label><input type="text" id="auth-username" placeholder="e.g. CryptoMark" maxlength="20"/></div>
+    </div>
+    <div class="form-group"><label>Email</label><input type="email" id="auth-email" placeholder="you@email.com"/></div>
+    <div class="form-group"><label>Password</label><input type="password" id="auth-password" placeholder="••••••••"/></div>
+    <div class="modal-actions">
+      <button class="btn-primary" onclick="submitAuth()">Continue</button>
+      <button class="btn-ghost" onclick="closeModal('auth-modal')">Cancel</button>
+    </div>
+    <p style="text-align:center;margin-top:14px;font-size:12px;color:var(--text3);">
+      <span id="auth-switch-text">Already have an account?</span>
+      <button id="auth-switch-btn" onclick="toggleAuthMode()" style="background:none;border:none;color:var(--accent);cursor:pointer;font-weight:600;font-size:12px;font-family:inherit;">Log in</button>
+    </p>
+  </div>
+</div>
+
+<!-- MAIN LAYOUT -->
+<div class="community-layout">
+
+  <!-- ROOMS SIDEBAR -->
+  <div class="rooms-sidebar">
+    <div class="rooms-header">Crypto Rooms</div>
+    <input type="text" class="room-search" id="room-search-filter" placeholder="🔍 Search rooms..." oninput="filterRooms(this.value)"/>
+    <div class="rooms-list" id="rooms-list"></div>
+    <button class="create-room-btn" onclick="alert('Sign in to create a room')">+ Create Room</button>
+  </div>
+
+  <!-- CHAT MAIN -->
+  <div class="chat-container">
+    <div class="chat-header">
+      <div>
+        <div class="chat-room-title" id="chat-room-title">💬 General</div>
+        <div class="chat-room-desc" id="chat-room-desc">Open discussion about crypto markets</div>
+      </div>
+      <div class="online-badge"><div class="online-dot"></div>Live</div>
+    </div>
+
+    <div class="messages-area" id="messages-area">
+      <div class="empty">Loading...</div>
+    </div>
+
+    <!-- SENTIMENT -->
+    <div class="sentiment-bar" id="sentiment-bar">
+      <div class="sentiment-title">
+        <span>📊 Room Sentiment</span>
+        <span id="sentiment-vote-count">0 votes</span>
+      </div>
+      <div class="sentiment-btns">
+        <button class="sent-btn sent-buy" id="vote-buy" onclick="castVote('buy')">🟢 Bullish</button>
+        <button class="sent-btn sent-hold" id="vote-hold" onclick="castVote('hold')">🟡 Neutral</button>
+        <button class="sent-btn sent-sell" id="vote-sell" onclick="castVote('sell')">🔴 Bearish</button>
+      </div>
+      <div class="sentiment-track">
+        <div id="track-buy" style="flex:1;background:var(--surface2);border-radius:2px 0 0 2px;transition:flex .4s;height:4px;"></div>
+        <div id="track-hold" style="flex:1;background:var(--surface2);transition:flex .4s;height:4px;"></div>
+        <div id="track-sell" style="flex:1;background:var(--surface2);border-radius:0 2px 2px 0;transition:flex .4s;height:4px;"></div>
+      </div>
+      <div class="sentiment-labels">
+        <span style="color:var(--green);" id="label-buy">— Bullish</span>
+        <span style="color:var(--amber);text-align:center;" id="label-hold">— Neutral</span>
+        <span style="color:var(--red);text-align:right;" id="label-sell">— Bearish</span>
+      </div>
+    </div>
+
+    <!-- INPUT -->
+    <div class="chat-input-area">
+      <div class="input-tabs">
+        <button class="input-tab active" onclick="switchTab('chat',this)">💬 Chat</button>
+        <button class="input-tab" onclick="switchTab('pick',this)">📈 Post Pick</button>
+      </div>
+      <div id="chat-panel">
+        <div class="msg-input-row">
+          <input type="text" class="msg-input" id="msg-input" placeholder="Share your take... (Enter to send)" onkeydown="if(event.key==='Enter')sendMessage()"/>
+          <button class="send-btn" onclick="sendMessage()">Send</button>
+        </div>
+        <div class="login-prompt" id="chat-login-prompt" style="display:none;">
+          <button onclick="showAuth('signup')">Sign up</button> or <button onclick="showAuth('login')">log in</button> to chat
+        </div>
+      </div>
+      <div id="pick-panel" style="display:none;">
+        <div class="pick-form">
+          <div class="pick-form-row">
+            <div class="pf-group"><label>Coin ID</label><input type="text" id="pick-ticker" placeholder="bitcoin" style="text-transform:lowercase;"/></div>
+            <div class="pf-group"><label>Direction</label><select id="pick-direction"><option value="BUY">🟢 LONG</option><option value="SELL">🔴 SHORT</option></select></div>
+            <div class="pf-group"><label>Entry $</label><input type="number" id="pick-entry" placeholder="79000"/></div>
+          </div>
+          <div class="pick-form-row">
+            <div class="pf-group"><label>Target $</label><input type="number" id="pick-target" placeholder="95000"/></div>
+            <div class="pf-group"><label>Stop Loss $</label><input type="number" id="pick-stop" placeholder="72000"/></div>
+            <div class="pf-group"><label>Timeframe</label><select id="pick-timeframe"><option>1 week</option><option selected>1 month</option><option>3 months</option><option>6 months</option></select></div>
+          </div>
+          <div class="pf-group" style="margin-bottom:8px;"><label>Notes (optional)</label><input type="text" id="pick-notes" placeholder="My thesis..."/></div>
+          <button class="pick-submit-btn" onclick="postPick()">Post Pick →</button>
+          <div class="login-prompt" id="pick-login-prompt" style="display:none;text-align:center;margin-top:8px;">
+            <button onclick="showAuth('signup')">Sign up</button> or <button onclick="showAuth('login')">log in</button> to post picks
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT SIDEBAR -->
+  <div class="right-sidebar">
+    <div class="sidebar-card">
+      <div class="sidebar-title">🔥 Hot Picks</div>
+      <div id="hot-picks"><div class="empty" style="padding:12px;">Loading...</div></div>
+    </div>
+    <div class="sidebar-card">
+      <div class="sidebar-title">🏆 Leaderboard</div>
+      <div id="leaderboard"><div class="empty" style="padding:12px;">Loading...</div></div>
+    </div>
+    <div class="sidebar-card">
+      <div class="sidebar-title">📖 Scoring</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.8;">
+        <div class="scoring-row">🎯 <span><strong>Win</strong> — price hits target</span></div>
+        <div class="scoring-row">❌ <span><strong>Loss</strong> — price hits stop</span></div>
+        <div class="scoring-row">🏆 <span style="color:#B45309;"><strong>Elite</strong> 75%+ win rate (3+ picks)</span></div>
+        <div class="scoring-row">💎 <span style="color:#1A6BF5;"><strong>Proven</strong> 60%+ win rate</span></div>
+        <div class="scoring-row">⭐ <span style="color:#059669;"><strong>Rising</strong> 50%+ win rate</span></div>
+        <div class="scoring-row">📊 <span><strong>Tracking</strong> building record</span></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const SUPABASE_URL = 'https://ttcprqkoibiztibhpsrp.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_iQhPAY-M-OUbFVbLQyCp5g_540rSkd1';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const COLORS = ['#F59E0B','#EF4444','#10B981','#3B82F6','#8B5CF6','#EC4899','#06B6D4','#84CC16'];
+var currentUser = null;
+var currentProfile = null;
+var currentRoom = null;
+var currentRoomSlug = 'general';
+var allRoomsData = [];
+var userVote = null;
+var authMode = 'signup';
+var TRADER_TIERS = {};
+var LIVE_PRICES = {};
+var realtimeChannel = null;
+
+// Default crypto rooms
+const DEFAULT_ROOMS = [
+  {id:'general', slug:'general', name:'General', description:'Open crypto discussion', icon:'💬'},
+  {id:'bitcoin', slug:'bitcoin', name:'Bitcoin', description:'BTC discussion & picks', icon:'₿'},
+  {id:'ethereum', slug:'ethereum', name:'Ethereum', description:'ETH ecosystem', icon:'⟠'},
+  {id:'solana', slug:'solana', name:'Solana', description:'SOL & ecosystem', icon:'◎'},
+  {id:'altcoins', slug:'altcoins', name:'Altcoins', description:'AVAX, DOT, LINK & more', icon:'🪙'},
+  {id:'defi', slug:'defi', name:'DeFi', description:'Decentralized finance', icon:'🏦'},
+  {id:'picks', slug:'picks', name:'Picks', description:'Share your trade ideas', icon:'📈'},
+  {id:'macro', slug:'macro', name:'Macro', description:'Rates, dollar, global markets', icon:'🌍'},
+];
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function timeAgo(ts) {
+  var d = Date.now() - new Date(ts).getTime();
+  var m = Math.floor(d/60000);
+  if (m < 1) return 'just now';
+  if (m < 60) return m + 'm ago';
+  var h = Math.floor(m/60);
+  if (h < 24) return h + 'h ago';
+  return Math.floor(h/24) + 'd ago';
+}
+
+function calcTier(closed, wins, wr) {
+  if (closed < 3) return {badge:'📊', label:'Tracking', color:'#94A3B8', bg:'rgba(148,163,184,.15)', tip:'Less than 3 closed picks'};
+  if (wr >= 75)   return {badge:'🏆', label:'Elite',    color:'#B45309', bg:'rgba(180,83,9,.15)',   tip:'75%+ win rate'};
+  if (wr >= 60)   return {badge:'💎', label:'Proven',   color:'#3B82F6', bg:'rgba(59,130,246,.15)', tip:'60%+ win rate'};
+  if (wr >= 50)   return {badge:'⭐', label:'Rising',   color:'#10B981', bg:'rgba(16,185,129,.15)', tip:'50%+ win rate'};
+  return {badge:'📊', label:'Tracking', color:'#94A3B8', bg:'rgba(148,163,184,.15)', tip:'Building record'};
+}
+
+function getTierBadge(username) {
+  var t = TRADER_TIERS[username];
+  if (!t) return '';
+  return '<span title="'+t.tip+'" style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px;background:'+t.bg+';color:'+t.color+';margin-left:4px;">'+t.badge+' '+t.label+'</span>';
+}
+
+// ── ROOMS ──
+function renderRoomList(rooms) {
+  var list = document.getElementById('rooms-list');
+  // Show default rooms + any from DB
+  var dbSlugs = rooms.map(function(r){return r.slug;});
+  var defaultFiltered = DEFAULT_ROOMS.filter(function(r){ return dbSlugs.indexOf(r.slug) < 0; });
+  
+  var html = DEFAULT_ROOMS.map(function(r) {
+    return '<div class="room-item '+(r.slug===currentRoomSlug?'active':'')+'" onclick="switchRoom(\''+r.slug+'\',\''+escHtml(r.name)+'\',\''+escHtml(r.description)+'\',\''+r.id+'\')"><div class="room-icon">'+r.icon+'</div><div class="room-name">'+r.name+'</div></div>';
+  }).join('');
+  
+  // Add any extra DB rooms (coin-specific)
+  var extraRooms = rooms.filter(function(r){
+    return !DEFAULT_ROOMS.find(function(d){return d.slug===r.slug;});
+  });
+  if (extraRooms.length) {
+    html += '<div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text3);padding:10px 14px 4px;">Coin Rooms</div>';
+    html += extraRooms.map(function(r) {
+      return '<div class="room-item '+(r.slug===currentRoomSlug?'active':'')+'" onclick="switchRoom(\''+r.slug+'\',\''+escHtml(r.name)+'\',\''+escHtml(r.description)+'\',\''+r.id+'\')"><div class="room-icon">🪙</div><div class="room-name">'+escHtml(r.name)+'</div></div>';
+    }).join('');
+  }
+  list.innerHTML = html;
+}
+
+function filterRooms(q) {
+  var items = document.querySelectorAll('.room-item');
+  items.forEach(function(el) {
+    el.style.display = el.textContent.toLowerCase().includes(q.toLowerCase()) ? '' : 'none';
+  });
+}
+
+async function switchRoom(slug, name, desc, roomId) {
+  currentRoomSlug = slug;
+  currentRoom = roomId || slug;
+  document.getElementById('chat-room-title').textContent = '💬 ' + name;
+  document.getElementById('chat-room-desc').textContent = desc || '';
+  document.querySelectorAll('.room-item').forEach(function(el) {
+    el.classList.toggle('active', el.querySelector('.room-name') && el.querySelector('.room-name').textContent === name);
+  });
+  await loadMessages(slug);
+  await loadSentiment(slug);
+  subscribeToRoom(slug);
+}
+
+// ── MESSAGES ──
+async function loadMessages(slug) {
+  var area = document.getElementById('messages-area');
+  area.innerHTML = '<div class="empty">Loading...</div>';
+  try {
+    var res = await sb.from('messages')
+      .select('*').eq('room_id', slug).eq('deleted', false)
+      .order('created_at', {ascending: true}).limit(100);
+    var msgs = res.data || [];
+    area.innerHTML = '';
+    if (!msgs.length) { area.innerHTML = '<div class="empty">No messages yet. Be the first! 👋</div>'; return; }
+    msgs.forEach(function(m) { appendMessage(m, false); });
+    area.scrollTop = area.scrollHeight;
+  } catch(e) { area.innerHTML = '<div class="empty">Could not load messages.</div>'; }
+}
+
+function appendMessage(msg, scroll) {
+  var area = document.getElementById('messages-area');
+  var empty = area.querySelector('.empty');
+  if (empty) empty.remove();
+  var isPick = msg.content && msg.content.startsWith('__PICK__');
+  var div = document.createElement('div');
+  div.className = 'msg';
+  var color = COLORS[(msg.username||'a').charCodeAt(0) % COLORS.length];
+  var timeStr = msg.created_at ? timeAgo(msg.created_at) : '';
+  if (isPick) {
+    try {
+      var pick = JSON.parse(msg.content.slice(8));
+      var isBuy = pick.direction === 'BUY';
+      var upside = pick.target_price && pick.entry_price ? (((pick.target_price - pick.entry_price)/pick.entry_price)*100).toFixed(1) : null;
+      div.innerHTML = '<div class="msg-avatar" style="background:'+color+';">'+((msg.username||'?')[0].toUpperCase())+'</div>'
+        + '<div class="msg-body">'
+        + '<div class="msg-header"><span class="msg-user" onclick="showTraderProfile(\''+escHtml(msg.username||'')+'\')">'+(msg.username||'Anon')+'</span>'+getTierBadge(msg.username||'')+'<span class="msg-time">'+timeStr+'</span></div>'
+        + '<div class="pick-card">'
+        + '<div class="pick-dir '+(isBuy?'buy':'sell')+'">'+(isBuy?'🟢 LONG':'🔴 SHORT')+' '+escHtml(pick.ticker||'')+'</div>'
+        + '<div class="pick-prices">'
+        + '<span>Entry: <strong>$'+(parseFloat(pick.actual_entry_price||pick.entry_price||0).toLocaleString())+'</strong></span>'
+        + '<span>Target: <strong style="color:var(--green);">$'+(parseFloat(pick.target_price||0).toLocaleString())+'</strong></span>'
+        + '<span>Stop: <strong style="color:var(--red);">$'+(parseFloat(pick.stop_loss||0).toLocaleString())+'</strong></span>'
+        + (upside ? '<span>Upside: <strong style="color:var(--green);">+'+upside+'%</strong></span>' : '')
+        + (pick.timeframe ? '<span>'+pick.timeframe+'</span>' : '')
+        + '</div>'
+        + (pick.notes ? '<div style="font-size:12px;color:var(--text2);margin-top:6px;">'+escHtml(pick.notes)+'</div>' : '')
+        + (pick.result ? '<div class="pick-perf" style="color:'+(pick.result==='win'?'var(--green)':'var(--red)')+';">'+(pick.result==='win'?'✅ Win':'❌ Loss')+(pick.return_pct?' · '+(parseFloat(pick.return_pct)>=0?'+':'')+parseFloat(pick.return_pct).toFixed(1)+'%':'')+'</div>' : '')
+        + '</div></div></div>';
+    } catch(e) { div.innerHTML = '<div class="msg-avatar" style="background:'+color+';">'+(msg.username||'?')[0].toUpperCase()+'</div><div class="msg-body"><div class="msg-header"><span class="msg-user">'+(msg.username||'Anon')+'</span></div><div class="msg-text">Pick posted</div></div>'; }
+  } else {
+    div.innerHTML = '<div class="msg-avatar" style="background:'+color+';">'+((msg.username||'?')[0].toUpperCase())+'</div>'
+      + '<div class="msg-body">'
+      + '<div class="msg-header"><span class="msg-user" onclick="showTraderProfile(\''+escHtml(msg.username||'')+'\')">'+(msg.username||'Anon')+'</span>'+getTierBadge(msg.username||'')+'<span class="msg-time">'+timeStr+'</span></div>'
+      + '<div class="msg-text">'+escHtml(msg.content||'')+'</div>'
+      + '</div>';
+  }
+  area.appendChild(div);
+  if (scroll !== false) area.scrollTop = area.scrollHeight;
+}
+
+function subscribeToRoom(slug) {
+  if (realtimeChannel) sb.removeChannel(realtimeChannel);
+  realtimeChannel = sb.channel('room:'+slug)
+    .on('postgres_changes', {event:'INSERT', schema:'public', table:'messages', filter:'room_id=eq.'+slug}, function(payload) {
+      appendMessage(payload.new, true);
+    }).subscribe();
+}
+
+// ── SEND MESSAGE ──
+async function sendMessage() {
+  if (!currentProfile) { showAuth('signup'); return; }
+  var input = document.getElementById('msg-input');
+  var content = input.value.trim();
+  if (!content) return;
+  input.value = '';
+  try {
+    await sb.from('messages').insert({
+      user_id: currentUser.id,
+      username: currentProfile.username,
+      content: content,
+      room_id: currentRoomSlug,
+      deleted: false,
+    });
+  } catch(e) { alert('Could not send: ' + e.message); }
+}
+
+// ── POST PICK ──
+async function postPick() {
+  if (!currentProfile) { showAuth('signup'); return; }
+  var ticker  = document.getElementById('pick-ticker').value.trim().toLowerCase();
+  var dir     = document.getElementById('pick-direction').value;
+  var entry   = parseFloat(document.getElementById('pick-entry').value);
+  var target  = parseFloat(document.getElementById('pick-target').value);
+  var stop    = parseFloat(document.getElementById('pick-stop').value);
+  var notes   = document.getElementById('pick-notes').value.trim();
+  var tf      = document.getElementById('pick-timeframe').value;
+  if (!ticker || !entry || !target || !stop) { alert('Please fill in coin, direction, entry, target and stop.'); return; }
+
+  // Fetch live price
+  var actualEntry = entry;
+  try {
+    var cgUrl = 'https://api.coingecko.com/api/v3/simple/price?ids='+ticker+'&vs_currencies=usd';
+    var cgR = await fetch(cgUrl, {headers:{'x-cg-demo-api-key':'CG-pwDvU5d2bQqDKVha9KGCkaCf'}});
+    if (cgR.ok) { var cgD = await cgR.json(); if (cgD[ticker] && cgD[ticker].usd) actualEntry = cgD[ticker].usd; }
+  } catch(e) {}
+
+  try {
+    var pickRes = await sb.from('picks').insert({
+      user_id: currentUser.id,
+      username: currentProfile.username,
+      ticker: ticker,
+      direction: dir,
+      entry_price: entry,
+      target_price: target,
+      stop_loss: stop,
+      notes: notes,
+      actual_entry_price: actualEntry,
+      posted_at: new Date().toISOString(),
+    }).select().single();
+
+    var pick = pickRes.data;
+    if (pickRes.error) { alert('Error: ' + pickRes.error.message); return; }
+
+    // Post as message
+    await sb.from('messages').insert({
+      user_id: currentUser.id,
+      username: currentProfile.username,
+      content: '__PICK__' + JSON.stringify({...pick, timeframe: tf}),
+      room_id: currentRoomSlug,
+      deleted: false,
+    });
+
+    // Auto-vote sentiment
+    var sentVote = dir === 'BUY' ? 'buy' : 'sell';
+    await sb.from('sentiment_votes').upsert(
+      {room_slug: currentRoomSlug, user_id: currentUser.id, vote: sentVote},
+      {onConflict: 'room_slug,user_id'}
+    );
+
+    ['pick-ticker','pick-entry','pick-target','pick-stop','pick-notes'].forEach(function(id){ document.getElementById(id).value=''; });
+    switchTab('chat', document.querySelector('.input-tab'));
+    loadHotPicks();
+    loadSentiment(currentRoomSlug);
+  } catch(e) { alert('Error posting pick: ' + e.message); }
+}
+
+// ── SENTIMENT ──
+async function loadSentiment(slug) {
+  try {
+    var res = await sb.from('sentiment_votes').select('vote').eq('room_slug', slug);
+    var votes = res.data || [];
+    var buy  = votes.filter(function(v){return v.vote==='buy';}).length;
+    var hold = votes.filter(function(v){return v.vote==='hold';}).length;
+    var sell = votes.filter(function(v){return v.vote==='sell';}).length;
+    var total = buy + hold + sell;
+    document.getElementById('sentiment-vote-count').textContent = total + (total===1?' vote':' votes');
+    if (total === 0) return;
+    var bp = Math.round(buy/total*100), hp = Math.round(hold/total*100), sp = 100-bp-hp;
+    var tb = document.getElementById('track-buy');
+    var th = document.getElementById('track-hold');
+    var ts = document.getElementById('track-sell');
+    if (tb) { tb.style.flex = bp||0.5; tb.style.background = 'var(--green)'; }
+    if (th) { th.style.flex = hp||0.5; th.style.background = 'var(--amber)'; }
+    if (ts) { ts.style.flex = sp||0.5; ts.style.background = 'var(--red)'; }
+    document.getElementById('label-buy').textContent = bp + '% Bullish';
+    document.getElementById('label-hold').textContent = hp + '% Neutral';
+    document.getElementById('label-sell').textContent = sp + '% Bearish';
+  } catch(e) {}
+}
+
+async function castVote(vote) {
+  if (!currentUser) { showAuth('signup'); return; }
+  userVote = vote;
+  ['vote-buy','vote-hold','vote-sell'].forEach(function(id){
+    var b = document.getElementById(id);
+    if (b) b.classList.toggle('active', id === 'vote-'+vote);
+  });
+  try {
+    await sb.from('sentiment_votes').upsert(
+      {room_slug: currentRoomSlug, user_id: currentUser.id, vote: vote},
+      {onConflict: 'room_slug,user_id'}
+    );
+    loadSentiment(currentRoomSlug);
+  } catch(e) {}
+}
+
+// ── LEADERBOARD ──
+async function loadLeaderboard() {
+  try {
+    var res = await sb.from('picks').select('username,result,upvotes,return_pct,actual_entry_price,exit_price,direction,ticker,posted_at,closed_at');
+    var data = res.data || [];
+    if (!data.length) { document.getElementById('leaderboard').innerHTML = '<div class="empty" style="padding:12px;">No picks yet. Be the first!</div>'; return; }
+    var users = {};
+    data.forEach(function(p) {
+      if (!users[p.username]) users[p.username] = {picks:0, wins:0, closedPicks:0, totalReturn:0, returns:[], upvotes:0, openPicks:[]};
+      var u = users[p.username];
+      u.picks++;
+      u.upvotes += (p.upvotes||0);
+      if (p.result === 'win' || p.result === 'loss' || p.result === 'closed') {
+        u.closedPicks++;
+        if (p.result === 'win') { u.wins++; if (p.return_pct) { u.totalReturn += parseFloat(p.return_pct); u.returns.push(parseFloat(p.return_pct)); } }
+        else if (p.return_pct) { u.totalReturn += parseFloat(p.return_pct); u.returns.push(parseFloat(p.return_pct)); }
+      } else {
+        u.openPicks.push({ticker: p.ticker, entry: parseFloat(p.actual_entry_price||p.entry_price||0), dir: p.direction||'BUY'});
+      }
+    });
+    var ranked = Object.entries(users).map(function(e) {
+      var name = e[0], s = e[1];
+      var wr = s.closedPicks ? Math.round(s.wins/s.closedPicks*100) : 0;
+      TRADER_TIERS[name] = calcTier(s.closedPicks, s.wins, wr);
+      return Object.assign({name:name, wr:wr}, s);
+    }).sort(function(a,b){ return b.totalReturn - a.totalReturn || b.closedPicks - a.closedPicks; }).slice(0, 10);
+
+    var medals = ['🥇','🥈','🥉'];
+    document.getElementById('leaderboard').innerHTML = ranked.map(function(u, i) {
+      var color = COLORS[u.name.charCodeAt(0) % COLORS.length];
+      var retColor = u.totalReturn >= 0 ? 'var(--green)' : 'var(--red)';
+      var t = TRADER_TIERS[u.name] || {};
+      return '<div class="leader-row" onclick="showTraderProfile(\''+escHtml(u.name)+'\')">'
+        + '<div style="display:flex;align-items:center;gap:8px;">'
+        + '<div style="font-size:13px;font-weight:700;width:20px;">'+(medals[i]||i+1)+'</div>'
+        + '<div class="leader-avatar" style="background:'+color+';">'+u.name[0].toUpperCase()+'</div>'
+        + '<div style="flex:1;"><div style="display:flex;align-items:center;gap:4px;"><span class="leader-name">'+escHtml(u.name)+'</span>'+(t.badge?'<span style="font-size:10px;padding:1px 5px;border-radius:8px;background:'+t.bg+';color:'+t.color+';">'+t.badge+' '+t.label+'</span>':'')+'</div>'
+        + '<div style="font-size:11px;color:var(--text3);">'+u.picks+' picks · '+u.closedPicks+' closed</div></div>'
+        + '<div style="font-size:13px;font-weight:700;color:'+retColor+';font-family:\'JetBrains Mono\',monospace;">'+(u.closedPicks>0?(u.totalReturn>=0?'+':'')+u.totalReturn.toFixed(1)+'%':'Tracking')+'</div>'
+        + '</div>'
+        + '<div style="display:flex;gap:8px;padding-left:48px;font-size:11px;color:var(--text3);">'
+        + '<span>Win rate: <strong style="color:var(--text);">'+u.wr+'%</strong></span>'
+        + '<span>👍 '+u.upvotes+'</span>'
+        + '</div></div>';
+    }).join('');
+  } catch(e) { document.getElementById('leaderboard').innerHTML = '<div class="empty" style="padding:12px;">Could not load leaderboard.</div>'; }
+}
+
+// ── HOT PICKS ──
+async function loadHotPicks() {
+  try {
+    var res = await sb.from('picks').select('*').is('result', null).order('upvotes', {ascending:false}).limit(5);
+    var data = res.data || [];
+    if (!data.length) { document.getElementById('hot-picks').innerHTML = '<div class="empty" style="padding:12px;">No active picks yet. Post one! 📈</div>'; return; }
+    document.getElementById('hot-picks').innerHTML = data.map(function(p) {
+      var isBuy = p.direction === 'BUY';
+      var entry = parseFloat(p.actual_entry_price||p.entry_price||0);
+      var upside = entry && p.target_price ? (((p.target_price-entry)/entry)*100).toFixed(1) : null;
+      return '<div class="hot-pick" onclick="showTraderProfile(\''+escHtml(p.username||'')+'\')">'
+        + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">'
+        + '<div><span style="font-size:14px;font-weight:700;font-family:\'JetBrains Mono\',monospace;">'+(p.ticker||'').toUpperCase()+'</span>'
+        + '<span style="font-size:11px;font-weight:600;padding:2px 7px;border-radius:10px;margin-left:6px;'+(isBuy?'background:var(--green-bg);color:var(--green)':'background:var(--red-bg);color:var(--red)')+';">'+(isBuy?'LONG':'SHORT')+'</span></div>'
+        + (upside ? '<span style="font-size:12px;font-weight:600;color:var(--green);">+'+upside+'% target</span>' : '')
+        + '</div>'
+        + '<div style="font-size:12px;color:var(--text3);">by '+(p.username||'Anon')+' · 👍 '+(p.upvotes||0)+'</div>'
+        + '</div>';
+    }).join('');
+  } catch(e) {}
+}
+
+// ── TRADER PROFILE ──
+async function showTraderProfile(username) {
+  if (!username) return;
+  var modal = document.getElementById('trader-modal');
+  var content = document.getElementById('trader-modal-content');
+  content.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3);">Loading '+escHtml(username)+'...</div>';
+  modal.style.display = 'flex';
+  try {
+    var res = await sb.from('picks').select('*').eq('username', username).order('posted_at', {ascending:false});
+    var picks = res.data || [];
+    if (!picks.length) { content.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3);">No picks found for '+escHtml(username)+'</div>'; return; }
+    var closed = picks.filter(function(p){return p.result==='win'||p.result==='loss'||p.result==='closed';});
+    var wins = closed.filter(function(p){return p.result==='win';});
+    var totalRet = closed.reduce(function(a,p){return a+(parseFloat(p.return_pct)||0);},0);
+    var wr = closed.length ? Math.round(wins.length/closed.length*100) : 0;
+    var t = calcTier(closed.length, wins.length, wr);
+    var color = COLORS[username.charCodeAt(0) % COLORS.length];
+    content.innerHTML = '<div style="display:flex;align-items:center;gap:14px;margin-bottom:20px;">'
+      + '<div style="width:48px;height:48px;border-radius:12px;background:'+color+';display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:#fff;">'+username[0].toUpperCase()+'</div>'
+      + '<div><div style="font-size:18px;font-weight:800;">'+escHtml(username)+'<span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;background:'+t.bg+';color:'+t.color+';margin-left:8px;">'+t.badge+' '+t.label+'</span></div>'
+      + '<div style="font-size:12px;color:var(--text3);">'+picks.length+' picks · '+closed.length+' closed · '+wr+'% win rate</div></div>'
+      + '<div style="margin-left:auto;font-size:18px;font-weight:800;color:'+(totalRet>=0?'var(--green)':'var(--red)');font-family:\'JetBrains Mono\',monospace;">'+(closed.length>0?(totalRet>=0?'+':'')+totalRet.toFixed(1)+'%':'Tracking')+'</div></div>'
+      + '<div style="display:flex;gap:12px;margin-bottom:18px;">'
+      + '<div style="flex:1;background:var(--surface2);border-radius:8px;padding:10px;text-align:center;"><div style="font-size:18px;font-weight:800;">'+wins.length+'</div><div style="font-size:11px;color:var(--text3);">Wins</div></div>'
+      + '<div style="flex:1;background:var(--surface2);border-radius:8px;padding:10px;text-align:center;"><div style="font-size:18px;font-weight:800;">'+(closed.length-wins.length)+'</div><div style="font-size:11px;color:var(--text3);">Losses</div></div>'
+      + '<div style="flex:1;background:var(--surface2);border-radius:8px;padding:10px;text-align:center;"><div style="font-size:18px;font-weight:800;">'+(picks.length-closed.length)+'</div><div style="font-size:11px;color:var(--text3);">Open</div></div>'
+      + '</div>'
+      + '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-bottom:10px;">Recent Picks</div>'
+      + picks.slice(0,10).map(function(p) {
+          var isBuy = p.direction==='BUY';
+          var isWin = p.result==='win', isLoss = p.result==='loss'||p.result==='closed';
+          return '<div style="background:var(--surface2);border-radius:8px;padding:10px 12px;margin-bottom:6px;display:flex;align-items:center;gap:10px;">'
+            + '<span style="font-size:13px;font-weight:700;font-family:\'JetBrains Mono\',monospace;">'+(p.ticker||'').toUpperCase()+'</span>'
+            + '<span style="font-size:11px;padding:2px 7px;border-radius:6px;'+(isBuy?'background:var(--green-bg);color:var(--green)':'background:var(--red-bg);color:var(--red)')+';">'+(isBuy?'LONG':'SHORT')+'</span>'
+            + '<span style="font-size:11px;color:var(--text3);margin-left:auto;">Entry: $'+(parseFloat(p.actual_entry_price||p.entry_price||0).toLocaleString())+'</span>'
+            + (p.result ? '<span style="font-size:12px;font-weight:700;color:'+(isWin?'var(--green)':'var(--red)')+';">'+(isWin?'✅':'❌')+(p.return_pct?' '+(parseFloat(p.return_pct)>=0?'+':'')+parseFloat(p.return_pct).toFixed(1)+'%':'')+'</span>' : '<span style="font-size:11px;color:var(--text3);">Open</span>')
+            + '</div>';
+        }).join('')
+      + '</div>';
+  } catch(e) { content.innerHTML = '<div style="padding:20px;color:var(--text3);">Could not load profile.</div>'; }
+}
+
+// ── AUTH ──
+var authIsLogin = false;
+function showAuth(mode) {
+  authIsLogin = mode === 'login';
+  document.getElementById('auth-title').textContent = authIsLogin ? 'Welcome back' : 'Create account';
+  document.getElementById('auth-subtitle').textContent = authIsLogin ? 'Log in to your Cryptikr account' : 'Join Cryptikr to share picks and chat.';
+  document.getElementById('signup-fields').style.display = authIsLogin ? 'none' : '';
+  document.getElementById('auth-switch-text').textContent = authIsLogin ? "Don't have an account?" : 'Already have an account?';
+  document.getElementById('auth-switch-btn').textContent = authIsLogin ? 'Sign up' : 'Log in';
+  document.getElementById('auth-error').style.display = 'none';
+  document.getElementById('auth-modal').style.display = 'flex';
+}
+function toggleAuthMode() { showAuth(authIsLogin ? 'signup' : 'login'); }
+function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+async function submitAuth() {
+  var email = document.getElementById('auth-email').value.trim();
+  var password = document.getElementById('auth-password').value;
+  var errEl = document.getElementById('auth-error');
+  errEl.style.display = 'none';
+  try {
+    var result;
+    if (authIsLogin) {
+      result = await sb.auth.signInWithPassword({email, password});
+    } else {
+      var username = document.getElementById('auth-username').value.trim();
+      if (!username) { errEl.textContent = 'Username required'; errEl.style.display = 'block'; return; }
+      result = await sb.auth.signUp({email, password, options:{data:{username}}});
+    }
+    if (result.error) { errEl.textContent = result.error.message; errEl.style.display = 'block'; return; }
+    closeModal('auth-modal');
+  } catch(e) { errEl.textContent = e.message; errEl.style.display = 'block'; }
+}
+
+function switchTab(tab, btn) {
+  document.getElementById('chat-panel').style.display = tab === 'chat' ? '' : 'none';
+  document.getElementById('pick-panel').style.display = tab === 'pick' ? '' : 'none';
+  document.querySelectorAll('.input-tab').forEach(function(b){ b.classList.remove('active'); });
+  if (btn) btn.classList.add('active');
+}
+
+// ── INIT ──
+async function init() {
+  // Check auth
+  var {data:{user}} = await sb.auth.getUser();
+  if (user) {
+    currentUser = user;
+    var meta = user.user_metadata || {};
+    currentProfile = {username: meta.username || user.email.split('@')[0]};
+    document.getElementById('header-auth').innerHTML = '<span style="font-size:13px;color:var(--text2);">'+escHtml(currentProfile.username)+'</span><button class="btn-ghost" onclick="sb.auth.signOut().then(()=>location.reload())">Log out</button>';
+    document.getElementById('chat-login-prompt').style.display = 'none';
+    document.getElementById('pick-login-prompt').style.display = 'none';
+  } else {
+    document.getElementById('chat-login-prompt').style.display = 'block';
+    document.getElementById('pick-login-prompt').style.display = 'block';
+  }
+
+  // Load rooms from Supabase (coin-specific rooms)
+  try {
+    var roomsRes = await sb.from('rooms').select('*').eq('status','active').order('name');
+    allRoomsData = roomsRes.data || [];
+  } catch(e) { allRoomsData = []; }
+  renderRoomList(allRoomsData);
+
+  // Load default room
+  var urlRoom = new URLSearchParams(window.location.search).get('room') || 'general';
+  var defaultRoom = DEFAULT_ROOMS.find(function(r){return r.slug===urlRoom;}) || DEFAULT_ROOMS[0];
+  await switchRoom(defaultRoom.slug, defaultRoom.name, defaultRoom.description, defaultRoom.id);
+  await loadLeaderboard();
+  await loadHotPicks();
+
+  // Listen for auth changes
+  sb.auth.onAuthStateChange(function(event, session) {
+    if (event === 'SIGNED_IN') location.reload();
+  });
+}
+
+init();
+</script>
+</body>
+</html>

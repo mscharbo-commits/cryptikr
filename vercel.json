@@ -6,6 +6,10 @@
   },
   "routes": [
     {
+      "src": "/api/movers",
+      "dest": "/api/movers.js"
+    },
+    {
       "src": "/crypto/(.*)",
       "dest": "/crypto.html"
     },

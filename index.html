@@ -143,6 +143,18 @@ nav{background:rgba(10,14,26,.95);backdrop-filter:blur(12px);border-bottom:1px s
 .powered a{color:var(--text3);font-size:12px;text-decoration:none;}
 .powered a:hover{color:var(--accent);}
 .powered a span{color:var(--blue);}
+.market-tabs{display:flex;gap:6px;margin-bottom:14px;}
+.mkt-tab{padding:7px 16px;background:transparent;border:1px solid var(--border);border-radius:20px;color:var(--text2);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s;}
+.mkt-tab:hover{border-color:var(--accent);color:var(--accent);}
+.mkt-tab.active{background:var(--accent);color:#000;border-color:var(--accent);}
+.trending-strip{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;margin-bottom:24px;scrollbar-width:none;}
+.trending-strip::-webkit-scrollbar{display:none;}
+.trend-chip{flex-shrink:0;display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:8px 12px;cursor:pointer;text-decoration:none;transition:all .15s;}
+.trend-chip:hover{border-color:var(--accent);background:rgba(245,158,11,.06);}
+.trend-rank{font-size:11px;font-weight:700;color:var(--text3);width:16px;}
+.trend-logo{width:22px;height:22px;border-radius:50%;}
+.trend-sym{font-size:13px;font-weight:700;color:var(--text);}
+.trend-pct{font-size:12px;font-weight:600;}
 </style>
 </head>
 <body>
@@ -221,10 +233,25 @@ nav{background:rgba(10,14,26,.95);backdrop-filter:blur(12px);border-bottom:1px s
   </div>
 
   <div id="market-section"></div>
+<div class="section" style="margin-bottom:0;padding-bottom:8px;">
+  <div class="section-header">
+    <div class="section-title">🔥 Trending Now</div>
+    <span style="font-size:12px;color:var(--text3);">Most searched on CoinGecko</span>
+  </div>
+  <div class="trending-strip" id="trending-strip">
+    <div style="color:var(--text3);font-size:13px;padding:8px;">Loading trends...</div>
+  </div>
+</div>
 <!-- MARKET OVERVIEW -->
   <div class="section-header">
     <div class="section-title">Market Overview</div>
     <div class="section-sub" id="market-updated">Loading...</div>
+  </div>
+  <div class="market-tabs">
+    <button class="mkt-tab active" onclick="switchMarketTab('all',this)">🪙 All</button>
+    <button class="mkt-tab" onclick="switchMarketTab('gainers',this)">📈 Gainers</button>
+    <button class="mkt-tab" onclick="switchMarketTab('losers',this)">📉 Losers</button>
+    <button class="mkt-tab" onclick="switchMarketTab('trending',this)">🔥 Trending</button>
   </div>
   <div class="market-grid" id="market-grid">
     <div class="loading-card"></div><div class="loading-card"></div>
@@ -371,6 +398,77 @@ async function loadGlobal() {
       el.className = 'gb-val ' + (v >= 0 ? 'up' : 'dn');
     }
   } catch(e) { console.warn('Global data error:', e); }
+}
+
+
+var allCoinsCache = [];
+var trendingCache = [];
+
+async function loadTrending() {
+  try {
+    var r = await fetch('https://api.coingecko.com/api/v3/search/trending', {headers:{'x-cg-demo-api-key':'CG-pwDvU5d2bQqDKVha9KGCkaCf'}});
+    if (!r.ok) return;
+    var data = await r.json();
+    var coins = (data.coins||[]).slice(0,10).map(function(c){return c.item;});
+    trendingCache = coins;
+    var strip = document.getElementById('trending-strip');
+    if (!strip) return;
+    strip.innerHTML = coins.map(function(c,i) {
+      var pct = c.data && c.data.price_change_percentage_24h && c.data.price_change_percentage_24h.usd || 0;
+      var pctStr = (pct>=0?'+':'')+pct.toFixed(2)+'%';
+      var pctColor = pct>=0?'#10B981':'#EF4444';
+      return '<a class="trend-chip" href="/crypto/'+c.id+'">'
+        +'<span class="trend-rank">#'+(i+1)+'</span>'
+        +(c.small?'<img class="trend-logo" src="'+c.small+'" />'  :'')
+        +'<span class="trend-sym">'+(c.symbol||'').toUpperCase()+'</span>'
+        +'<span class="trend-pct" style="color:'+pctColor+';">'+pctStr+'</span>'
+        +'</a>';
+    }).join('');
+  } catch(e) {}
+}
+
+function renderMarketGrid(coins) {
+  var grid = document.getElementById('market-grid');
+  if (!grid) return;
+  grid.innerHTML = coins.map(function(c) {
+    var pct = c.price_change_percentage_24h||0;
+    var cls = pct>=0?'up':'dn';
+    var pctStr = (pct>=0?'+':'')+pct.toFixed(2)+'%';
+    var priceStr = c.current_price>=1000
+      ? '$'+Math.round(c.current_price).toLocaleString()
+      : c.current_price>=1?'$'+c.current_price.toFixed(2)
+      :'$'+c.current_price.toFixed(6);
+    return '<a class="market-card" href="/crypto/'+c.id+'">'
+      +(c.image?'<img class="mc-logo" src="'+c.image+'" />':'<div class="mc-logo-fallback">'+(c.symbol||'?')[0].toUpperCase()+'</div>')
+      +'<div class="mc-info"><div class="mc-name">'+(c.name||'')+'</div>'
+      +'<div class="mc-sym">'+(c.symbol||'').toUpperCase()+'</div></div>'
+      +'<div class="mc-price-wrap"><div class="mc-price">'+priceStr+'</div>'
+      +'<div class="mc-change '+cls+'">'+pctStr+'</div></div></a>';
+  }).join('');
+}
+
+function switchMarketTab(tab, btn) {
+  document.querySelectorAll('.mkt-tab').forEach(function(b){b.classList.remove('active');});
+  if (btn) btn.classList.add('active');
+  if (tab==='trending') {
+    var grid = document.getElementById('market-grid');
+    if (grid) grid.innerHTML = trendingCache.map(function(c) {
+      var pct = c.data&&c.data.price_change_percentage_24h&&c.data.price_change_percentage_24h.usd||0;
+      var cls = pct>=0?'up':'dn';
+      return '<a class="market-card" href="/crypto/'+c.id+'">'
+        +(c.small?'<img class="mc-logo" src="'+c.small+'" />':'')
+        +'<div class="mc-info"><div class="mc-name">'+(c.name||'')+'</div>'
+        +'<div class="mc-sym">'+(c.symbol||'').toUpperCase()+'</div></div>'
+        +'<div class="mc-price-wrap"><div class="mc-price">'+(c.data&&c.data.price||'—')+'</div>'
+        +'<div class="mc-change '+cls+'">'+(pct>=0?'+':'')+pct.toFixed(2)+'%</div></div></a>';
+    }).join('');
+    return;
+  }
+  var coins = allCoinsCache.slice();
+  if (tab==='gainers') coins=coins.filter(function(c){return c.price_change_percentage_24h>0;}).sort(function(a,b){return b.price_change_percentage_24h-a.price_change_percentage_24h;}).slice(0,12);
+  else if (tab==='losers') coins=coins.filter(function(c){return c.price_change_percentage_24h<0;}).sort(function(a,b){return a.price_change_percentage_24h-b.price_change_percentage_24h;}).slice(0,12);
+  else coins=coins.slice(0,12);
+  renderMarketGrid(coins);
 }
 
 async function loadMarket() {
@@ -667,6 +765,7 @@ async function loadTicker() {
 // Load everything
 loadGlobal();
 loadMarket();
+  loadTrending();
 loadAI();
 loadNews();
 loadTicker();

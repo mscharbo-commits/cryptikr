@@ -275,6 +275,7 @@ function renderCoin(c) {
     + '</div>'
     + '<div class="sent-bar"><div class="sent-bar-buy" id="bar-buy" style="flex:1"></div><div class="sent-bar-hold" id="bar-hold" style="flex:1"></div><div class="sent-bar-sell" id="bar-sell" style="flex:1"></div></div>'
     + '<div class="voted-msg" id="voted-msg">✓ Vote recorded!</div>'
+    + '<a id="community-link" href="/community.html?room=bitcoin" style="display:block;margin-top:12px;padding:10px;background:linear-gradient(135deg,rgba(245,158,11,.1),rgba(239,68,68,.1));border:1px solid rgba(245,158,11,.25);border-radius:8px;text-align:center;text-decoration:none;font-size:13px;font-weight:700;color:var(--accent);transition:all .15s;">💬 Join the Community Discussion →</a>'
     + '<div class="chat-wrap">'
     + '<div class="chat-msgs" id="chat-msgs"><div style="color:#475569;font-size:12px;text-align:center;padding:12px;">Be the first to comment...</div></div>'
     + '<div class="chat-input-row">'
@@ -294,11 +295,13 @@ function renderCoin(c) {
     var vs = document.getElementById('vote-sell');
     var cs = document.getElementById('chat-send-btn');
     var ci = document.getElementById('chat-input');
+    var cl = document.getElementById('community-link');
     if (vb) vb.onclick = function() { castVote('buy'); };
     if (vh) vh.onclick = function() { castVote('hold'); };
     if (vs) vs.onclick = function() { castVote('sell'); };
     if (cs) cs.onclick = sendChat;
     if (ci) ci.onkeydown = function(e) { if (e.key === 'Enter') sendChat(); };
+    if (cl) cl.href = '/community.html?room=' + currentCoinId;
   }, 100);
   loadNews(currentCoinId);
   loadSentiment(currentCoinId);

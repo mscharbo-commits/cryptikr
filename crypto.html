@@ -263,11 +263,43 @@ function renderCoin(c) {
     + statRow('Sentiment ▲', c.sentiment_up ? '<span class="up">'+parseFloat(c.sentiment_up).toFixed(0)+'%</span>' : '—')
     + statRow('Sentiment ▼', c.sentiment_dn ? '<span class="dn">'+parseFloat(c.sentiment_dn).toFixed(0)+'%</span>' : '—')
     + statRow('CoinGecko Score', c.coingecko_score ? parseFloat(c.coingecko_score).toFixed(0)+'/100' : '—')
-    + '</div></div></div></div>';
+    + '</div></div>'
+
+    // Community section — full width below the grid
+    + '<div class="comm-card" id="community-section">'
+    + '<div class="comm-title"><span>💬 Community Sentiment</span><span class="comm-vote-count" id="vote-count">Loading...</span></div>'
+    + '<div class="sent-row">'
+    + '<div class="sent-box sent-buy" id="vote-buy"><div class="sent-pct" style="color:#10B981;" id="buy-pct">—</div><div class="sent-lbl" style="color:#10B981;">Buy</div></div>'
+    + '<div class="sent-box sent-hold" id="vote-hold"><div class="sent-pct" style="color:#F59E0B;" id="hold-pct">—</div><div class="sent-lbl" style="color:#F59E0B;">Hold</div></div>'
+    + '<div class="sent-box sent-sell" id="vote-sell"><div class="sent-pct" style="color:#EF4444;" id="sell-pct">—</div><div class="sent-lbl" style="color:#EF4444;">Sell</div></div>'
+    + '</div>'
+    + '<div class="sent-bar"><div class="sent-bar-buy" id="bar-buy" style="flex:1"></div><div class="sent-bar-hold" id="bar-hold" style="flex:1"></div><div class="sent-bar-sell" id="bar-sell" style="flex:1"></div></div>'
+    + '<div class="voted-msg" id="voted-msg">✓ Vote recorded!</div>'
+    + '<div class="chat-wrap">'
+    + '<div class="chat-msgs" id="chat-msgs"><div style="color:#475569;font-size:12px;text-align:center;padding:12px;">Be the first to comment...</div></div>'
+    + '<div class="chat-input-row">'
+    + '<input class="chat-input" id="chat-input" placeholder="Share your take..." maxlength="200"/>'
+    + '<button class="chat-send" id="chat-send-btn">Send</button>'
+    + '</div></div></div>'
+    + '</div>'
+    + '</div>';
 
   document.getElementById('main-content').innerHTML = html;
   document.title = sym + ' ' + priceStr + ' — Cryptikr';
   setTimeout(function() { loadTVChart(currentCoinId, c.tvSym); }, 400);
+  // Wire up vote buttons after DOM is set
+  setTimeout(function() {
+    var vb = document.getElementById('vote-buy');
+    var vh = document.getElementById('vote-hold');
+    var vs = document.getElementById('vote-sell');
+    var cs = document.getElementById('chat-send-btn');
+    var ci = document.getElementById('chat-input');
+    if (vb) vb.onclick = function() { castVote('buy'); };
+    if (vh) vh.onclick = function() { castVote('hold'); };
+    if (vs) vs.onclick = function() { castVote('sell'); };
+    if (cs) cs.onclick = sendChat;
+    if (ci) ci.onkeydown = function(e) { if (e.key === 'Enter') sendChat(); };
+  }, 100);
   loadNews(currentCoinId);
   loadSentiment(currentCoinId);
   loadChat(currentCoinId);

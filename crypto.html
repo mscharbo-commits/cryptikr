@@ -149,14 +149,41 @@ header{background:rgba(10,14,26,.95);backdrop-filter:blur(12px);border-bottom:1p
 var currentCoinId = '';
 
 var TV_SYMS = {
+  // Major
   'bitcoin':'BINANCE:BTCUSDT','ethereum':'BINANCE:ETHUSDT','solana':'BINANCE:SOLUSDT',
   'ripple':'BINANCE:XRPUSDT','dogecoin':'BINANCE:DOGEUSDT','cardano':'BINANCE:ADAUSDT',
+  'the-open-network':'BINANCE:TONUSDT','tron':'BINANCE:TRXUSDT','litecoin':'BINANCE:LTCUSDT',
+  'bitcoin-cash':'BINANCE:BCHUSDT','stellar':'BINANCE:XLMUSDT','monero':'BINANCE:XMRUSDT',
+  // Layer 2 / Alt L1
   'avalanche-2':'BINANCE:AVAXUSDT','polkadot':'BINANCE:DOTUSDT','chainlink':'BINANCE:LINKUSDT',
-  'matic-network':'BINANCE:MATICUSDT','uniswap':'BINANCE:UNIUSDT','litecoin':'BINANCE:LTCUSDT',
+  'matic-network':'BINANCE:MATICUSDT','polygon':'BINANCE:MATICUSDT',
   'near':'BINANCE:NEARUSDT','aptos':'BINANCE:APTUSDT','arbitrum':'BINANCE:ARBUSDT',
-  'cosmos':'BINANCE:ATOMUSDT','shiba-inu':'BINANCE:SHIBUSDT','tron':'BINANCE:TRXUSDT',
-  'the-open-network':'BINANCE:TONUSDT','sui':'BINANCE:SUIUSDT','pepe':'BINANCE:PEPEUSDT',
-  'bitcoin-cash':'BINANCE:BCHUSDT','aave':'BINANCE:AAVEUSDT','maker':'BINANCE:MKRUSDT',
+  'cosmos':'BINANCE:ATOMUSDT','sui':'BINANCE:SUIUSDT','optimism':'BINANCE:OPUSDT',
+  'injective-protocol':'BINANCE:INJUSDT','sei-network':'BINANCE:SEIUSDT',
+  'stacks':'BINANCE:STXUSDT','immutable-x':'BINANCE:IMXUSDT',
+  'mantle':'BINANCE:MNTUSDT','celestia':'BINANCE:TIAUSDT',
+  // DeFi
+  'uniswap':'BINANCE:UNIUSDT','aave':'BINANCE:AAVEUSDT','maker':'BINANCE:MKRUSDT',
+  'curve-dao-token':'BINANCE:CRVUSDT','lido-dao':'BINANCE:LDOUSDT',
+  'jupiter-exchange-solana':'BINANCE:JUPUSDT','jito-governance-token':'BINANCE:JTOUSDT',
+  'raydium':'BINANCE:RAYUSDT','ondo-finance':'BINANCE:ONDOUSDT',
+  'ethena':'BINANCE:ENAUSDT','pendle':'BINANCE:PENDLEUSDT',
+  // Meme
+  'shiba-inu':'BINANCE:SHIBUSDT','pepe':'BINANCE:PEPEUSDT',
+  'bonk':'BINANCE:BONKUSDT','dogwifcoin':'BINANCE:WIFUSDT',
+  'book-of-meme':'BINANCE:BOMUSDT','popcat':'BINANCE:POPCATUSDT',
+  'cat-in-a-dogs-world':'BINANCE:MEWUSDT','mog-coin':'BINANCE:MOGUSDT',
+  // AI / Gaming
+  'fetch-ai':'BINANCE:FETUSDT','render-token':'BINANCE:RENDERUSDT',
+  'artificial-superintelligence-alliance':'BINANCE:FETUSDT',
+  'worldcoin-wld':'BINANCE:WLDUSDT','akash-network':'BINANCE:AKTUSDT',
+  'axie-infinity':'BINANCE:AXSUSDT','sandbox':'BINANCE:SANDUSDT',
+  'decentraland':'BINANCE:MANAUSDT','gala':'BINANCE:GALAUSDT',
+  // Other common
+  'hedera-hashgraph':'BINANCE:HBARUSDT','vechain':'BINANCE:VETUSDT',
+  'filecoin':'BINANCE:FILUSDT','internet-computer':'BINANCE:ICPUSDT',
+  'kaspa':'BINANCE:KASUSDT','floki':'BINANCE:FLOKIUSDT',
+  'bittensor':'BINANCE:TAOUSDT','conflux-token':'BINANCE:CFXUSDT',
 };
 
 function fmt(n) {
@@ -313,7 +340,12 @@ function loadTVChart(coinId, tvSymOverride) {
   var el = document.getElementById('tv-container');
   if (!el) return;
   var sym = tvSymOverride || TV_SYMS[coinId] || (function() {
+    // Strip trailing version numbers (-2, -3) and hyphens
     var clean = coinId.replace(/-\d+$/, '').replace(/-/g, '').toUpperCase();
+    // Common symbol overrides for coins with non-obvious tickers
+    var overrides = {'TRON':'TRX','STELLAR':'XLM','NEARPROTOCOL':'NEAR','SHIBAINU':'SHIB',
+      'THEOPENNETWORK':'TON','BITCOINCASH':'BCH','DOGECOIN':'DOGE','CARDANO':'ADA'};
+    if (overrides[clean]) clean = overrides[clean];
     return 'BINANCE:' + clean + 'USDT';
   }());
   var src = 'https://s.tradingview.com/widgetembed/?symbol='+encodeURIComponent(sym)

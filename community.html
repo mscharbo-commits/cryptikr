@@ -315,16 +315,15 @@ var LIVE_PRICES = {};
 var realtimeChannel = null;
 
 // Default crypto rooms
+// Room UUIDs from Supabase — these match the 'rooms' table
 const DEFAULT_ROOMS = [
-  {id:'general', slug:'general', name:'General', description:'Open crypto discussion', icon:'💬'},
-  {id:'bitcoin', slug:'bitcoin', name:'Bitcoin', description:'BTC discussion & picks', icon:'₿'},
-  {id:'ethereum', slug:'ethereum', name:'Ethereum', description:'ETH ecosystem', icon:'⟠'},
-  {id:'solana', slug:'solana', name:'Solana', description:'SOL & ecosystem', icon:'◎'},
-  {id:'altcoins', slug:'altcoins', name:'Altcoins', description:'AVAX, DOT, LINK & more', icon:'🪙'},
-  {id:'defi', slug:'defi', name:'DeFi', description:'Decentralized finance', icon:'🏦'},
-  {id:'picks', slug:'picks', name:'Picks', description:'Share your trade ideas', icon:'📈'},
-  {id:'macro', slug:'macro', name:'Macro', description:'Rates, dollar, global markets', icon:'🌍'},
+  {id:'b42b5221-ad9b-4677-9b58-908824872be0', slug:'general',   name:'General',   description:'Open crypto discussion', icon:'💬'},
+  {id:'d21ca413-d230-4753-9604-86819a568e2d', slug:'picks',     name:'Picks',      description:'Share your trade ideas', icon:'📈'},
+  {id:'f37f4bd8-e1bf-4e27-9ce5-fd8f789735c1', slug:'macro',     name:'Macro',      description:'Rates, dollar, global markets', icon:'🌍'},
+  {id:'9e1691e3-2e4f-4b30-8df2-1938ff50a622', slug:'ask',       name:'Ask Anything',description:'Questions welcome', icon:'❓'},
 ];
+// Crypto-specific rooms — loaded from Supabase rooms table
+var CRYPTO_ROOMS = [];
 
 function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -387,7 +386,7 @@ function filterRooms(q) {
 
 async function switchRoom(slug, name, desc, roomId) {
   currentRoomSlug = slug;
-  currentRoom = roomId || slug;
+  currentRoom = roomId; // Must be UUID for messages table
   document.getElementById('chat-room-title').textContent = '💬 ' + name;
   document.getElementById('chat-room-desc').textContent = desc || '';
   document.querySelectorAll('.room-item').forEach(function(el) {
@@ -402,23 +401,27 @@ async function switchRoom(slug, name, desc, roomId) {
 async function loadMessages(slug) {
   var area = document.getElementById('messages-area');
   area.innerHTML = '<div class="empty">Loading...</div>';
+  if (!currentRoom) { area.innerHTML = '<div class="empty">Select a room to start chatting.</div>'; return; }
   try {
-    var res = await sb.from('community_messages')
-      .select('*').eq('room_slug', slug)
+    var res = await sb.from('messages')
+      .select('*').eq('room_id', currentRoom).eq('deleted', false)
       .order('created_at', {ascending: true}).limit(100);
     var msgs = res.data || [];
     area.innerHTML = '';
     if (!msgs.length) { area.innerHTML = '<div class="empty">No messages yet. Be the first! 👋</div>'; return; }
     msgs.forEach(function(m) { appendMessage(m, false); });
     area.scrollTop = area.scrollHeight;
-  } catch(e) { area.innerHTML = '<div class="empty">Could not load messages.</div>'; }
+  } catch(e) {
+    console.error('loadMessages error:', e);
+    area.innerHTML = '<div class="empty">No messages yet. Be the first! 👋</div>';
+  }
 }
 
 function appendMessage(msg, scroll) {
   var area = document.getElementById('messages-area');
   var empty = area.querySelector('.empty');
   if (empty) empty.remove();
-  var msgText = msg.content || msg.message || ''; var isPick = msgText.startsWith('__PICK__');
+  var msgText = msg.content || ''; var isPick = msgText.startsWith('__PICK__');
   var div = document.createElement('div');
   div.className = 'msg';
   var color = COLORS[(msg.username||'a').charCodeAt(0) % COLORS.length];
@@ -457,11 +460,9 @@ function appendMessage(msg, scroll) {
 
 function subscribeToRoom(slug) {
   if (realtimeChannel) sb.removeChannel(realtimeChannel);
-  realtimeChannel = sb.channel('cryptikr:'+slug)
-    .on('postgres_changes', {event:'INSERT', schema:'public', table:'community_messages', filter:'room_slug=eq.'+slug}, function(payload) {
-      var msg = payload.new;
-      // Map community_messages fields to message format
-      appendMessage({username: msg.username, content: msg.message, created_at: msg.created_at}, true);
+  realtimeChannel = sb.channel('room:'+currentRoom)
+    .on('postgres_changes', {event:'INSERT', schema:'public', table:'messages', filter:'room_id=eq.'+currentRoom}, function(payload) {
+      appendMessage(payload.new, true);
     }).subscribe();
 }
 
@@ -473,10 +474,12 @@ async function sendMessage() {
   if (!content) return;
   input.value = '';
   try {
-    await sb.from('community_messages').insert({
+    await sb.from('messages').insert({
+      user_id: currentUser.id,
       username: currentProfile.username,
-      message: content,
-      room_slug: currentRoomSlug,
+      content: content,
+      room_id: currentRoom,
+      deleted: false,
     });
   } catch(e) { alert('Could not send: ' + e.message); }
 }
@@ -519,10 +522,12 @@ async function postPick() {
     if (pickRes.error) { alert('Error: ' + pickRes.error.message); return; }
 
     // Post as message
-    await sb.from('community_messages').insert({
+    await sb.from('messages').insert({
+      user_id: currentUser.id,
       username: currentProfile.username,
-      message: '__PICK__' + JSON.stringify(Object.assign({}, pick, {timeframe: tf})),
-      room_slug: currentRoomSlug,
+      content: '__PICK__' + JSON.stringify(Object.assign({}, pick, {timeframe: tf})),
+      room_id: currentRoom,
+      deleted: false,
     });
 
     // Auto-vote sentiment

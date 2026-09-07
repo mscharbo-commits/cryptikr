@@ -199,12 +199,12 @@ nav{background:rgba(10,14,26,.95);backdrop-filter:blur(12px);border-bottom:1px s
     <button class="hero-go" onclick="goSearch()">Analyze ↗</button>
   </div>
   <div class="hero-chips" id="quick-chips">
-    <span class="chip" onclick="goCoin('bitcoin')">₿ Bitcoin</span>
-    <span class="chip" onclick="goCoin('ethereum')">Ξ Ethereum</span>
-    <span class="chip" onclick="goCoin('solana')">◎ Solana</span>
-    <span class="chip" onclick="goCoin('ripple')">✕ XRP</span>
-    <span class="chip" onclick="goCoin('dogecoin')">Ð Dogecoin</span>
-    <span class="chip" onclick="goCoin('cardano')">₳ Cardano</span>
+    <a class="chip" href="/community.html">💬 Community</a>
+    <a class="chip" href="#news-section">📰 News</a>
+    <a class="chip" href="#ai-section">🧠 AI Analysis</a>
+    <a class="chip" href="#market-section">📊 Markets</a>
+    <a class="chip" href="/community.html?room=picks">📈 Top Picks</a>
+    <a class="chip" href="/community.html?room=bitcoin">₿ BTC Room</a>
   </div>
 </div>
 
@@ -220,7 +220,8 @@ nav{background:rgba(10,14,26,.95);backdrop-filter:blur(12px);border-bottom:1px s
     <div class="gb-item"><div class="gb-label">Market Cap 24h</div><div class="gb-val" id="g-mcap-chg">—</div></div>
   </div>
 
-  <!-- MARKET OVERVIEW -->
+  <div id="market-section"></div>
+<!-- MARKET OVERVIEW -->
   <div class="section-header">
     <div class="section-title">Market Overview</div>
     <div class="section-sub" id="market-updated">Loading...</div>
@@ -258,6 +259,7 @@ nav{background:rgba(10,14,26,.95);backdrop-filter:blur(12px);border-bottom:1px s
 </div>
 
 
+<div id="ai-section"></div>
 <!-- AI MARKET OVERVIEW -->
 <div class="section">
   <div class="section-header">
@@ -275,6 +277,7 @@ nav{background:rgba(10,14,26,.95);backdrop-filter:blur(12px);border-bottom:1px s
   </div>
 </div>
 
+<div id="news-section"></div>
 <!-- CRYPTO NEWS -->
 <div class="section">
   <div class="section-header">
